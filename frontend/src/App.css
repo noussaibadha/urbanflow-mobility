@@ -201,13 +201,6 @@
   margin: 0 0 1rem;
 }
 
-.auth-forgot-link {
-  align-self: flex-end;
-  font-size: 0.8rem;
-  color: var(--uf-ink-soft);
-  margin-top: -0.5rem;
-}
-
 .form-success {
   color: var(--uf-primary);
   font-weight: 600;

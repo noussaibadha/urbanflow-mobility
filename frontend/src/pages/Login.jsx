@@ -63,9 +63,6 @@ export function Login() {
             required
           />
         </label>
-        <Link to="/forgot-password" className="auth-forgot-link">
-          Mot de passe oublié ?
-        </Link>
         {error && <p className="form-error">{error}</p>}
         <button type="submit" disabled={submitting}>
           {submitting ? 'Connexion...' : 'Se connecter'}

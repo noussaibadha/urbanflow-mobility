@@ -9,8 +9,6 @@ import { RoutePlanner } from './pages/RoutePlanner'
 import { Home } from './pages/Home'
 import { Dashboard } from './pages/Dashboard'
 import { Favorites } from './pages/Favorites'
-import { ForgotPassword } from './pages/ForgotPassword'
-import { ResetPassword } from './pages/ResetPassword'
 
 function App() {
   return (
@@ -21,8 +19,6 @@ function App() {
         <Route path="/planner" element={<RoutePlanner />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route
           path="/profile"
           element={

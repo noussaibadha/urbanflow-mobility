@@ -39,9 +39,6 @@ ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('user', 'admin
 
 UPDATE users SET role = 'admin' WHERE email = 'admin@urbanflow.fr';
 
-ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255);
-ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMPTZ;
-
 CREATE TABLE IF NOT EXISTS mobility_profiles (
   user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   preferred_transport VARCHAR(30) NOT NULL DEFAULT 'bike' CHECK (preferred_transport IN ('bike', 'scooter', 'car', 'public_transport', 'walk')),
