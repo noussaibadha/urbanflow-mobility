@@ -17,7 +17,8 @@ export async function getProfile(req, res, next) {
 
 export async function updateProfile(req, res, next) {
   try {
-    const { preferred_transport, home_station_id, bio } = req.body;
+    const { preferred_transport, home_station_id, bio, eco_priority, avoid_highways, notifications_enabled } =
+      req.body;
 
     if (preferred_transport && !TRANSPORT_OPTIONS.includes(preferred_transport)) {
       return res.status(400).json({
@@ -29,6 +30,9 @@ export async function updateProfile(req, res, next) {
       preferred_transport,
       home_station_id: home_station_id ?? null,
       bio: bio ?? null,
+      eco_priority: eco_priority ?? null,
+      avoid_highways: avoid_highways ?? null,
+      notifications_enabled: notifications_enabled ?? null,
     });
     res.json({ profile });
   } catch (err) {

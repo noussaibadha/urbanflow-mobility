@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import logo from '../assets/logo.png'
 
 export function Login() {
   const { login } = useAuth()
@@ -19,7 +20,7 @@ export function Login() {
     setSubmitting(true)
     try {
       await login(form)
-      navigate('/profile')
+      navigate('/')
     } catch (err) {
       setError(err.message)
     } finally {
@@ -29,22 +30,40 @@ export function Login() {
 
   return (
     <div className="auth-page">
+      <div className="auth-logo-row">
+        <img src={logo} alt="UrbanFlow Mobility" />
+      </div>
       <h1>Connexion</h1>
+      <p className="auth-subtitle">Ravis de vous revoir</p>
       <form onSubmit={handleSubmit} className="auth-form">
         <label>
           Email
-          <input type="email" name="email" value={form.email} onChange={handleChange} required />
+          <input
+            type="email"
+            name="email"
+            value={form.email}
+            onChange={handleChange}
+            placeholder="camille@email.com"
+            required
+          />
         </label>
         <label>
           Mot de passe
-          <input type="password" name="password" value={form.password} onChange={handleChange} required />
+          <input
+            type="password"
+            name="password"
+            value={form.password}
+            onChange={handleChange}
+            placeholder="••••••••"
+            required
+          />
         </label>
         {error && <p className="form-error">{error}</p>}
         <button type="submit" disabled={submitting}>
           {submitting ? 'Connexion...' : 'Se connecter'}
         </button>
       </form>
-      <p>
+      <p className="auth-footer">
         Pas encore de compte ? <Link to="/register">S'inscrire</Link>
       </p>
     </div>
