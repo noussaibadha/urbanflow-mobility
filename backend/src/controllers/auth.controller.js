@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import * as UsersModel from '../models/users.model.js';
+import { sendPasswordResetEmail } from '../services/email.service.js';
 
 const SALT_ROUNDS = 12;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -93,9 +94,11 @@ export async function forgotPassword(req, res, next) {
       const baseUrl = process.env.CORS_ORIGIN || 'http://localhost:5173';
       const resetLink = `${baseUrl}/reset-password/${token}`;
 
-      // TODO: send this link by email instead of logging it (e.g. with Resend or
-      // Nodemailer) once a real email-sending service is wired up for this project.
-      console.log(`Password reset requested for ${user.email}. Reset link: ${resetLink}`);
+      try {
+        await sendPasswordResetEmail(user.email, resetLink);
+      } catch (err) {
+        console.error('Failed to send password reset email:', err);
+      }
     }
 
     // Always respond the same way, whether or not the email is registered,

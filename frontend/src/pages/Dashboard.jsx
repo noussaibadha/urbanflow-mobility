@@ -18,11 +18,15 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!user) {
+      setLoading(false)
+      return
+    }
     apiRequest('/trips/summary', { auth: true })
       .then(setSummary)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [user])
 
   if (loading) return <p>Chargement...</p>
 
@@ -31,19 +35,31 @@ export function Dashboard() {
   return (
     <div className="dashboard-page">
       <div className="dashboard-header-card">
-        <div className="greeting">Bonjour,</div>
-        <h1>{user?.full_name}</h1>
-        <div className="co2-badge">
-          <span className="dot" />
-          <span>
-            CO₂ économisé : <strong>{summary ? summary.co2SavedKg.toFixed(1) : '0.0'} kg</strong>
-          </span>
-        </div>
+        {user ? (
+          <>
+            <div className="greeting">Bonjour,</div>
+            <h1>{user.full_name}</h1>
+            <div className="co2-badge">
+              <span className="dot" />
+              <span>
+                CO₂ économisé : <strong>{summary ? summary.co2SavedKg.toFixed(1) : '0.0'} kg</strong>
+              </span>
+            </div>
+          </>
+        ) : (
+          <h1>Tableau de bord</h1>
+        )}
       </div>
 
       {error && <p className="form-error">{error}</p>}
 
-      {summary && summary.totalTrips === 0 ? (
+      {!user ? (
+        <div className="white-card">
+          <p className="empty-state">
+            Aucune donnée pour l'instant. Connectez-vous pour suivre vos trajets et votre empreinte carbone.
+          </p>
+        </div>
+      ) : summary && summary.totalTrips === 0 ? (
         <div className="white-card">
           <p className="empty-state">
             Aucun trajet enregistré pour l'instant. Calculez un itinéraire et confirmez-le pour voir vos

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import { apiRequest } from '../api/client'
 import { geocode } from '../lib/geo'
 
 export function Favorites() {
+  const { user } = useAuth()
   const navigate = useNavigate()
   const [favorites, setFavorites] = useState([])
   const [name, setName] = useState('')
@@ -13,11 +15,15 @@ export function Favorites() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    if (!user) {
+      setLoading(false)
+      return
+    }
     apiRequest('/favorites', { auth: true })
       .then((data) => setFavorites(data.favorites))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [user])
 
   async function handleAdd(e) {
     e.preventDefault()
@@ -62,17 +68,23 @@ export function Favorites() {
       <h1>Favoris</h1>
       <p className="auth-subtitle">Vos adresses enregistrées</p>
 
-      <form onSubmit={handleAdd} className="favorite-add-form">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom (ex : Domicile)" required />
-        <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Adresse" required />
-        <button type="submit" disabled={submitting}>
-          {submitting ? 'Ajout...' : 'Ajouter'}
-        </button>
-      </form>
+      {user && (
+        <form onSubmit={handleAdd} className="favorite-add-form">
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom (ex : Domicile)" required />
+          <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Adresse" required />
+          <button type="submit" disabled={submitting}>
+            {submitting ? 'Ajout...' : 'Ajouter'}
+          </button>
+        </form>
+      )}
 
       {error && <p className="form-error">{error}</p>}
 
-      {favorites.length === 0 ? (
+      {!user ? (
+        <p className="empty-state">
+          Aucun favori pour l'instant. Connectez-vous pour enregistrer vos adresses préférées.
+        </p>
+      ) : favorites.length === 0 ? (
         <p className="empty-state">Aucun favori pour l'instant.</p>
       ) : (
         favorites.map((fav) => (

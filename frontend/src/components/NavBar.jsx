@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 function HomeIcon({ color }) {
@@ -76,17 +76,8 @@ function NavItem({ to, label, Icon, active, onClick }) {
 export function NavBar() {
   const { user } = useAuth()
   const location = useLocation()
-  const navigate = useNavigate()
 
   const isActive = (path) => location.pathname === path
-
-  function goProtected(path, message) {
-    if (user) {
-      navigate(path)
-    } else {
-      navigate('/login', { state: { message } })
-    }
-  }
 
   return (
     <nav className="nav-bar">
@@ -97,18 +88,8 @@ export function NavBar() {
         <div className="nav-items">
           <NavItem to="/" label="Accueil" Icon={HomeIcon} active={isActive('/')} />
           <NavItem to="/planner" label="Itinéraire" Icon={PlannerIcon} active={isActive('/planner')} />
-          <NavItem
-            label="Tableau"
-            Icon={DashboardIcon}
-            active={isActive('/dashboard')}
-            onClick={() => goProtected('/dashboard', 'Connectez-vous pour accéder à votre tableau de bord.')}
-          />
-          <NavItem
-            label="Favoris"
-            Icon={FavoritesIcon}
-            active={isActive('/favorites')}
-            onClick={() => goProtected('/favorites', 'Connectez-vous pour accéder à vos favoris.')}
-          />
+          <NavItem to="/dashboard" label="Tableau" Icon={DashboardIcon} active={isActive('/dashboard')} />
+          <NavItem to="/favorites" label="Favoris" Icon={FavoritesIcon} active={isActive('/favorites')} />
           <NavItem
             to={user ? '/profile' : '/login'}
             label="Profil"
