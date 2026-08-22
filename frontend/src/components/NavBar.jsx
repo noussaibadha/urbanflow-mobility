@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 function HomeIcon({ color }) {
@@ -49,25 +49,6 @@ function ProfileIcon({ color }) {
   )
 }
 
-function LoginIcon({ color }) {
-  return (
-    <svg width="21" height="21" viewBox="0 0 24 24" fill="none">
-      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" stroke={color} strokeWidth="2" strokeLinecap="round" />
-      <path d="M10 8l5 4-5 4M15 12H3" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-function RegisterIcon({ color }) {
-  return (
-    <svg width="21" height="21" viewBox="0 0 24 24" fill="none">
-      <circle cx="9" cy="8" r="3.4" stroke={color} strokeWidth="2" />
-      <path d="M2 20c0-4 3-6.4 7-6.4" stroke={color} strokeWidth="2" strokeLinecap="round" fill="none" />
-      <path d="M18 8v6M15 11h6" stroke={color} strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  )
-}
-
 function NavItem({ to, label, Icon, active, onClick }) {
   const color = active ? '#52B788' : 'rgba(26,58,42,0.4)'
   const content = (
@@ -95,8 +76,17 @@ function NavItem({ to, label, Icon, active, onClick }) {
 export function NavBar() {
   const { user } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
 
   const isActive = (path) => location.pathname === path
+
+  function goProtected(path, message) {
+    if (user) {
+      navigate(path)
+    } else {
+      navigate('/login', { state: { message } })
+    }
+  }
 
   return (
     <nav className="nav-bar">
@@ -107,18 +97,24 @@ export function NavBar() {
         <div className="nav-items">
           <NavItem to="/" label="Accueil" Icon={HomeIcon} active={isActive('/')} />
           <NavItem to="/planner" label="Itinéraire" Icon={PlannerIcon} active={isActive('/planner')} />
-          {user ? (
-            <>
-              <NavItem to="/dashboard" label="Tableau" Icon={DashboardIcon} active={isActive('/dashboard')} />
-              <NavItem to="/favorites" label="Favoris" Icon={FavoritesIcon} active={isActive('/favorites')} />
-              <NavItem to="/profile" label="Profil" Icon={ProfileIcon} active={isActive('/profile')} />
-            </>
-          ) : (
-            <>
-              <NavItem to="/login" label="Connexion" Icon={LoginIcon} active={isActive('/login')} />
-              <NavItem to="/register" label="Inscription" Icon={RegisterIcon} active={isActive('/register')} />
-            </>
-          )}
+          <NavItem
+            label="Tableau"
+            Icon={DashboardIcon}
+            active={isActive('/dashboard')}
+            onClick={() => goProtected('/dashboard', 'Connectez-vous pour accéder à votre tableau de bord.')}
+          />
+          <NavItem
+            label="Favoris"
+            Icon={FavoritesIcon}
+            active={isActive('/favorites')}
+            onClick={() => goProtected('/favorites', 'Connectez-vous pour accéder à vos favoris.')}
+          />
+          <NavItem
+            to={user ? '/profile' : '/login'}
+            label="Profil"
+            Icon={ProfileIcon}
+            active={isActive('/profile') || isActive('/login') || isActive('/register')}
+          />
         </div>
       </div>
     </nav>

@@ -191,6 +191,23 @@
   font-size: 0.85rem;
 }
 
+.auth-notice {
+  background: rgba(82, 183, 136, 0.14);
+  border: 1px solid rgba(82, 183, 136, 0.35);
+  color: var(--uf-ink);
+  border-radius: 10px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.85rem;
+  margin: 0 0 1rem;
+}
+
+.auth-forgot-link {
+  align-self: flex-end;
+  font-size: 0.8rem;
+  color: var(--uf-ink-soft);
+  margin-top: -0.5rem;
+}
+
 .form-success {
   color: var(--uf-primary);
   font-weight: 600;

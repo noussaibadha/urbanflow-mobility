@@ -1,14 +1,18 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import logo from '../assets/logo.png'
 
 export function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+
+  const notice = location.state?.message
+  const noticeType = location.state?.type === 'success' ? 'form-success' : 'auth-notice'
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -35,6 +39,7 @@ export function Login() {
       </div>
       <h1>Connexion</h1>
       <p className="auth-subtitle">Ravis de vous revoir</p>
+      {notice && <p className={noticeType}>{notice}</p>}
       <form onSubmit={handleSubmit} className="auth-form">
         <label>
           Email
@@ -58,6 +63,9 @@ export function Login() {
             required
           />
         </label>
+        <Link to="/forgot-password" className="auth-forgot-link">
+          Mot de passe oublié ?
+        </Link>
         {error && <p className="form-error">{error}</p>}
         <button type="submit" disabled={submitting}>
           {submitting ? 'Connexion...' : 'Se connecter'}
