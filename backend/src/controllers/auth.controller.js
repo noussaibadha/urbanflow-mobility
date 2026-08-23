@@ -67,6 +67,10 @@ export async function login(req, res, next) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
+    if (user.is_suspended) {
+      return res.status(403).json({ error: 'Ce compte a été suspendu' });
+    }
+
     const token = signToken(user);
     res.json({ token, user: toPublicUser(user) });
   } catch (err) {

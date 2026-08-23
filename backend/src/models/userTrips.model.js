@@ -32,3 +32,18 @@ export async function findSinceByUser(userId, since) {
   );
   return rows;
 }
+
+// Aggregated-only query (COUNT/SUM) for admin use: never selects individual
+// trip fields (labels, timestamps) to keep per-trip geolocation data private.
+export async function getStatsByUserId(userId) {
+  const { rows } = await pool.query(
+    `SELECT
+       COUNT(*)::int AS total_trips,
+       COALESCE(SUM(distance_meters), 0)::float AS total_distance_meters,
+       COALESCE(SUM(CASE WHEN mode != 'car' THEN distance_meters ELSE 0 END), 0)::float AS eco_distance_meters
+     FROM user_trips
+     WHERE user_id = $1`,
+    [userId]
+  );
+  return rows[0];
+}

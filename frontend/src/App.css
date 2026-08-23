@@ -415,8 +415,73 @@
 .admin-users-table th,
 .admin-users-table td {
   text-align: left;
-  padding: 0.5rem 0;
+  padding: 0.5rem 0.4rem 0.5rem 0;
   border-bottom: 1px solid rgba(26, 58, 42, 0.08);
+  vertical-align: top;
+}
+
+.admin-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-status-badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.admin-status-badge.active {
+  background: rgba(82, 183, 136, 0.16);
+  color: var(--uf-primary);
+}
+
+.admin-status-badge.suspended {
+  background: rgba(179, 38, 30, 0.12);
+  color: var(--uf-error);
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  min-width: 220px;
+}
+
+.admin-actions button {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.72rem;
+  border-radius: 8px;
+  background: var(--uf-bg-screen);
+  color: var(--uf-ink);
+  white-space: nowrap;
+}
+
+.admin-actions button:hover {
+  background: var(--uf-accent-light);
+}
+
+.admin-actions .admin-action-danger {
+  background: rgba(179, 38, 30, 0.1);
+  color: var(--uf-error);
+}
+
+.admin-actions .admin-action-danger:hover {
+  background: rgba(179, 38, 30, 0.2);
+}
+
+.admin-stats-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  padding: 0.5rem 0 0.75rem;
+  font-size: 0.85rem;
+}
+
+.admin-stats-panel strong {
+  color: var(--uf-ink);
 }
 
 .logout-link {
