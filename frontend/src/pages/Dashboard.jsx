@@ -70,7 +70,7 @@ export function Dashboard() {
         summary && (
           <>
             <div className="white-card">
-              <div className="section-label">Trajets de la semaine</div>
+              <div className="card-heading">Trajets de la semaine</div>
               <div className="weekly-chart">
                 {summary.weeklyChart.map((d, i) => (
                   <div key={i} className="weekly-chart-col">
@@ -84,7 +84,7 @@ export function Dashboard() {
               </div>
             </div>
 
-            <div className="section-label">Derniers trajets</div>
+            <div className="card-heading">Derniers trajets</div>
             <div className="white-card">
               {summary.recentTrips.map((trip) => {
                 const meta = TRANSPORT_MODE_META[trip.mode] ?? { color: '#52B788' }

@@ -9,6 +9,12 @@
   #root {
     padding-bottom: 6rem;
   }
+
+  /* Login/Register render without the nav bar, so they don't need the
+     bottom clearance reserved for the mobile tab bar. */
+  #root:has(.auth-page) {
+    padding-bottom: 2rem;
+  }
 }
 
 .card {
@@ -323,6 +329,13 @@
   margin-bottom: 0.6rem;
 }
 
+.card-heading {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--uf-ink);
+  margin-bottom: 0.75rem;
+}
+
 .white-card {
   background: var(--uf-white);
   border-radius: 16px;
@@ -499,11 +512,17 @@
 
 /* ---------- Home page ---------- */
 
+.home-search-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 .home-map-wrap {
   position: relative;
-  height: 75vh;
-  min-height: 420px;
-  max-height: 720px;
+  height: 60vh;
+  min-height: 360px;
+  max-height: 640px;
   border-radius: 24px;
   overflow: hidden;
 }
@@ -514,19 +533,13 @@
 }
 
 .home-search-bar {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  right: 16px;
-  z-index: 400;
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  background: var(--uf-white);
+  background: var(--uf-bg-screen);
   border-radius: 16px;
   padding: 0 1rem;
   height: 50px;
-  box-shadow: 0 8px 24px rgba(26, 58, 42, 0.14);
   border: none;
   font: inherit;
 }
@@ -538,29 +551,31 @@
   font: inherit;
   color: var(--uf-ink);
   flex: 1;
+  min-width: 0;
   height: 100%;
 }
 
 .home-quick-modes {
-  position: absolute;
-  top: 78px;
-  left: 16px;
-  right: 16px;
-  z-index: 400;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.5rem;
 }
 
+@media (max-width: 480px) {
+  .home-quick-modes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .home-quick-mode {
-  background: var(--uf-white);
+  min-width: 0;
+  background: var(--uf-bg-screen);
   border-radius: 14px;
   padding: 0.6rem 0.2rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.35rem;
-  box-shadow: 0 6px 16px rgba(26, 58, 42, 0.1);
   cursor: pointer;
   border: none;
   font: inherit;
@@ -570,18 +585,24 @@
   width: 16px;
   height: 16px;
   border-radius: 8px;
+  flex-shrink: 0;
 }
 
 .home-quick-mode .label {
   font-size: 0.68rem;
   color: var(--uf-ink);
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .home-velib-pill {
   position: absolute;
   bottom: 14px;
   left: 16px;
+  right: 16px;
   z-index: 400;
   display: flex;
   align-items: center;
@@ -592,6 +613,11 @@
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--uf-ink);
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .home-velib-pill .dot {
@@ -696,7 +722,7 @@
 
 .planner-mode-pill.selected {
   border-color: var(--transport-color, var(--uf-primary));
-  background: color-mix(in srgb, var(--transport-color, var(--uf-primary)) 20%, transparent);
+  background: color-mix(in srgb, var(--transport-color, var(--uf-primary)) 45%, transparent);
 }
 
 .planner-mode-pill.selected .label {

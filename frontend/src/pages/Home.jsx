@@ -35,9 +35,7 @@ export function Home() {
 
   return (
     <div className="home-page">
-      <div className="home-map-wrap">
-        <RouteMap livePosition={livePosition} sharedStations={sharedStations} />
-
+      <div className="white-card home-search-card">
         <form className="home-search-bar" onSubmit={handleSearchSubmit}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <circle cx="7" cy="7" r="5.5" stroke="#1A3A2A" strokeWidth="1.6" />
@@ -58,6 +56,10 @@ export function Home() {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="home-map-wrap">
+        <RouteMap livePosition={livePosition} sharedStations={sharedStations} />
 
         <div className="home-velib-pill">
           <span className="dot" />
