@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { apiRequest } from '../api/client'
 import { TRANSPORT_MODE_META } from '../lib/transportModes'
+import { GreetingCard } from '../components/GreetingCard'
 
 function formatDistance(meters) {
   return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${Math.round(meters)} m`
@@ -34,22 +35,13 @@ export function Dashboard() {
 
   return (
     <div className="dashboard-page">
-      <div className="dashboard-header-card">
-        {user ? (
-          <>
-            <div className="greeting">Bonjour,</div>
-            <h1>{user.full_name}</h1>
-            <div className="co2-badge">
-              <span className="dot" />
-              <span>
-                CO₂ économisé : <strong>{summary ? summary.co2SavedKg.toFixed(1) : '0.0'} kg</strong>
-              </span>
-            </div>
-          </>
-        ) : (
+      {user ? (
+        <GreetingCard fullName={user.full_name} co2SavedKg={summary?.co2SavedKg} />
+      ) : (
+        <div className="dashboard-header-card">
           <h1>Tableau de bord</h1>
-        )}
-      </div>
+        </div>
+      )}
 
       {error && <p className="form-error">{error}</p>}
 

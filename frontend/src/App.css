@@ -555,47 +555,8 @@
   height: 100%;
 }
 
-.home-quick-modes {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-@media (max-width: 480px) {
-  .home-quick-modes {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-.home-quick-mode {
-  min-width: 0;
-  background: var(--uf-bg-screen);
-  border-radius: 14px;
-  padding: 0.6rem 0.2rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.35rem;
+.favorite-item[role='button'] {
   cursor: pointer;
-  border: none;
-  font: inherit;
-}
-
-.home-quick-mode .dot {
-  width: 16px;
-  height: 16px;
-  border-radius: 8px;
-  flex-shrink: 0;
-}
-
-.home-quick-mode .label {
-  font-size: 0.68rem;
-  color: var(--uf-ink);
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
 }
 
 .home-velib-pill {
