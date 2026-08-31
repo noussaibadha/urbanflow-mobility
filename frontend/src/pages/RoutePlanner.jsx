@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { RouteMap } from '../components/RouteMap'
 import { TransportPicker } from '../components/TransportPicker'
+import { AddressAutocomplete } from '../components/AddressAutocomplete'
 import { geocode, getRoute, watchPosition } from '../lib/geo'
 import { apiRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
@@ -17,6 +18,11 @@ function formatDuration(seconds) {
   const minutes = Math.round(seconds / 60)
   if (minutes < 60) return `${minutes} min`
   return `${Math.floor(minutes / 60)} h ${minutes % 60} min`
+}
+
+function formatArrivalTime(seconds) {
+  const arrival = new Date(Date.now() + seconds * 1000)
+  return arrival.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 }
 
 export function RoutePlanner() {
@@ -154,9 +160,9 @@ export function RoutePlanner() {
           {!useLiveLocation && (
             <div className="planner-field">
               <span className="dot" style={{ background: '#52B788' }} />
-              <input
+              <AddressAutocomplete
                 value={departureText}
-                onChange={(e) => setDepartureText(e.target.value)}
+                onChange={setDepartureText}
                 placeholder="Départ"
                 required={!useLiveLocation}
               />
@@ -165,9 +171,9 @@ export function RoutePlanner() {
 
           <div className="planner-field">
             <span className="dot" style={{ background: '#B7E4C7' }} />
-            <input
+            <AddressAutocomplete
               value={destinationText}
-              onChange={(e) => setDestinationText(e.target.value)}
+              onChange={setDestinationText}
               placeholder="Destination"
               required
             />
@@ -195,6 +201,18 @@ export function RoutePlanner() {
           <div className="route-summary">
             <span>Distance : {formatDistance(routeResult.distanceMeters)}</span>
             <span>Durée estimée : {formatDuration(routeResult.durationSeconds)}</span>
+            <span>Arrivée estimée : {formatArrivalTime(routeResult.durationSeconds)}</span>
+          </div>
+
+          <div className="route-co2-summary">
+            <div className="route-co2-stat">
+              <span className="route-co2-label">CO₂ émis</span>
+              <span className="route-co2-value">{routeResult.co2UsedKg.toFixed(2)} kg</span>
+            </div>
+            <div className="route-co2-stat route-co2-stat-saved">
+              <span className="route-co2-label">CO₂ économisé vs voiture</span>
+              <span className="route-co2-value">{routeResult.co2SavedKg.toFixed(2)} kg</span>
+            </div>
           </div>
 
           {user && (

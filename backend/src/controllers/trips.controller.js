@@ -5,7 +5,7 @@ const MODE_LABELS = {
   bike: 'Vélo',
   scooter: 'Trottinette',
   car: 'Voiture',
-  public_transport: 'Bus',
+  public_transport: 'Métro',
   walk: 'Marche',
 };
 const CAR_CO2_KG_PER_KM = 0.192;
@@ -78,8 +78,17 @@ export async function getSummary(req, res, next) {
         ? 0
         : Math.round((last30Trips.filter((t) => t.mode !== 'car').length / last30Trips.length) * 100);
 
+    const totalDistanceMeters = allTrips.reduce((sum, t) => sum + t.distance_meters, 0);
+
+    const modeBreakdown = MODE_OPTIONS.map((mode) => ({
+      mode,
+      modeLabel: MODE_LABELS[mode],
+      count: allTrips.filter((t) => t.mode === mode).length,
+    })).filter((m) => m.count > 0);
+
     res.json({
       totalTrips: allTrips.length,
+      totalDistanceMeters,
       weeklyChart,
       recentTrips: recentTrips.map((t) => ({
         id: t.id,
@@ -88,6 +97,7 @@ export async function getSummary(req, res, next) {
         distanceMeters: t.distance_meters,
         createdAt: t.created_at,
       })),
+      modeBreakdown,
       co2SavedKg: Math.round(co2SavedKg * 10) / 10,
       ecoScore,
     });

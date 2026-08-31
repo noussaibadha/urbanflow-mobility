@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { RouteMap } from '../components/RouteMap'
 import { GreetingCard } from '../components/GreetingCard'
+import { AddressAutocomplete } from '../components/AddressAutocomplete'
 import { watchPosition } from '../lib/geo'
 import { apiRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
@@ -70,9 +71,10 @@ export function Home() {
             <circle cx="7" cy="7" r="5.5" stroke="#1A3A2A" strokeWidth="1.6" />
             <line x1="11" y1="11" x2="15" y2="15" stroke="#1A3A2A" strokeWidth="1.6" strokeLinecap="round" />
           </svg>
-          <input
+          <AddressAutocomplete
             value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            onChange={setSearchText}
+            onSelect={(suggestion) => goToPlanner(suggestion.label)}
             placeholder="Où allez-vous ?"
           />
         </form>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { apiRequest } from '../api/client'
 import { TRANSPORT_MODE_META } from '../lib/transportModes'
@@ -50,6 +51,9 @@ export function Dashboard() {
           <p className="empty-state">
             Aucune donnée pour l'instant. Connectez-vous pour suivre vos trajets et votre empreinte carbone.
           </p>
+          <Link to="/login" className="dashboard-cta-btn">
+            Se connecter
+          </Link>
         </div>
       ) : summary && summary.totalTrips === 0 ? (
         <div className="white-card">
@@ -57,10 +61,24 @@ export function Dashboard() {
             Aucun trajet enregistré pour l'instant. Calculez un itinéraire et confirmez-le pour voir vos
             statistiques ici.
           </p>
+          <Link to="/planner" className="dashboard-cta-btn">
+            Planifier un itinéraire
+          </Link>
         </div>
       ) : (
         summary && (
           <>
+            <div className="dashboard-stats-row">
+              <div className="white-card dashboard-stat-tile">
+                <span className="dashboard-stat-value">{summary.totalTrips}</span>
+                <span className="dashboard-stat-label">Trajets enregistrés</span>
+              </div>
+              <div className="white-card dashboard-stat-tile">
+                <span className="dashboard-stat-value">{formatDistance(summary.totalDistanceMeters)}</span>
+                <span className="dashboard-stat-label">Distance parcourue</span>
+              </div>
+            </div>
+
             <div className="white-card">
               <div className="card-heading">Trajets de la semaine</div>
               <div className="weekly-chart">
@@ -75,6 +93,33 @@ export function Dashboard() {
                 ))}
               </div>
             </div>
+
+            {summary.modeBreakdown.length > 0 && (
+              <>
+                <div className="card-heading">Répartition par mode</div>
+                <div className="white-card">
+                  {summary.modeBreakdown.map((m) => {
+                    const meta = TRANSPORT_MODE_META[m.mode] ?? { color: '#52B788' }
+                    const pct = Math.round((m.count / summary.totalTrips) * 100)
+                    return (
+                      <div className="mode-breakdown-row" key={m.mode}>
+                        <span className="mode-breakdown-label">
+                          <span className="dot" style={{ background: meta.color }} />
+                          {m.modeLabel}
+                        </span>
+                        <div className="mode-breakdown-bar-track">
+                          <div
+                            className="mode-breakdown-bar-fill"
+                            style={{ width: `${pct}%`, background: meta.color }}
+                          />
+                        </div>
+                        <span className="mode-breakdown-count">{m.count}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )}
 
             <div className="card-heading">Derniers trajets</div>
             <div className="white-card">

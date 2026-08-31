@@ -1,20 +1,34 @@
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search'
-const OSRM_URL = 'https://router.project-osrm.org/route/v1'
 
-const OSRM_PROFILE_BY_MODE = {
-  walk: 'walking',
-  bike: 'cycling',
-  scooter: 'cycling',
-  car: 'driving',
+// router.project-osrm.org (the single public OSRM demo) only ever serves its
+// "driving" graph no matter which profile is requested in the URL, so every
+// mode used to come back with the exact same route. FOSSGIS (the German OSM
+// chapter) hosts separate car/bike/foot OSRM instances with real distinct
+// routing graphs, so each mode actually produces a different path.
+const OSRM_ROUTING_BY_MODE = {
+  car: { base: 'https://routing.openstreetmap.de/routed-car', profile: 'driving' },
+  bike: { base: 'https://routing.openstreetmap.de/routed-bike', profile: 'bike' },
+  scooter: { base: 'https://routing.openstreetmap.de/routed-bike', profile: 'bike' },
+  walk: { base: 'https://routing.openstreetmap.de/routed-foot', profile: 'foot' },
+  public_transport: { base: 'https://routing.openstreetmap.de/routed-foot', profile: 'foot' },
 }
 
-// Average urban speeds (m/s), used to estimate duration for modes the public
-// OSRM demo server does not actually model separately from driving.
+// Average urban speeds (m/s), used to estimate duration for modes whose
+// routing graph doesn't model them distinctly: scooter reuses the bike graph
+// and métro reuses the foot graph as a path approximation, so their real-world
+// average speed has to be substituted for the graph's own duration estimate.
 const AVERAGE_SPEED_MS = {
-  walk: 1.4, // ~5 km/h
-  bike: 4.2, // ~15 km/h
   scooter: 5.5, // ~20 km/h
-  car: 11.1, // ~40 km/h
+  public_transport: 6.9, // ~25 km/h average incl. station stops
+}
+
+// kg of CO2 per km travelled, used to estimate emissions and savings vs car.
+const CO2_KG_PER_KM = {
+  car: 0.192,
+  public_transport: 0.004,
+  scooter: 0.006,
+  bike: 0,
+  walk: 0,
 }
 
 export async function geocode(query) {
@@ -31,10 +45,21 @@ export async function geocode(query) {
   return { lat: parseFloat(lat), lon: parseFloat(lon), label: display_name }
 }
 
+export async function searchAddresses(query, limit = 5) {
+  if (!query || query.trim().length < 3) return []
+
+  const url = `${NOMINATIM_URL}?format=json&limit=${limit}&q=${encodeURIComponent(query)}`
+  const res = await fetch(url, { headers: { Accept: 'application/json' } })
+  if (!res.ok) return []
+
+  const results = await res.json()
+  return results.map((r) => ({ lat: parseFloat(r.lat), lon: parseFloat(r.lon), label: r.display_name }))
+}
+
 export async function getRoute({ start, end, mode }) {
-  const profile = OSRM_PROFILE_BY_MODE[mode] || 'driving'
+  const routing = OSRM_ROUTING_BY_MODE[mode] || OSRM_ROUTING_BY_MODE.car
   const coords = `${start.lon},${start.lat};${end.lon},${end.lat}`
-  const url = `${OSRM_URL}/${profile}/${coords}?overview=full&geometries=geojson`
+  const url = `${routing.base}/route/v1/${routing.profile}/${coords}?overview=full&geometries=geojson`
 
   const res = await fetch(url)
   if (!res.ok) throw new Error("Le service d'itinéraire n'a pas répondu")
@@ -46,13 +71,20 @@ export async function getRoute({ start, end, mode }) {
 
   const route = data.routes[0]
   const path = route.geometry.coordinates.map(([lon, lat]) => [lat, lon])
-  const speed = AVERAGE_SPEED_MS[mode] || AVERAGE_SPEED_MS.car
-  const durationSeconds = mode === 'car' ? route.duration : route.distance / speed
+  const speed = AVERAGE_SPEED_MS[mode]
+  const durationSeconds = speed ? route.distance / speed : route.duration
+
+  const distanceKm = route.distance / 1000
+  const co2Factor = CO2_KG_PER_KM[mode] ?? CO2_KG_PER_KM.car
+  const co2UsedKg = Math.round(distanceKm * co2Factor * 100) / 100
+  const co2SavedKg = Math.round(Math.max(0, distanceKm * (CO2_KG_PER_KM.car - co2Factor)) * 100) / 100
 
   return {
     path,
     distanceMeters: route.distance,
     durationSeconds,
+    co2UsedKg,
+    co2SavedKg,
   }
 }
 

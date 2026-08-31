@@ -33,6 +33,30 @@ export async function createFavorite(req, res, next) {
   }
 }
 
+export async function updateFavorite(req, res, next) {
+  try {
+    const { name, address, latitude, longitude } = req.body;
+
+    if (!name || !address) {
+      return res.status(400).json({ error: 'name and address are required' });
+    }
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return res.status(400).json({ error: 'latitude and longitude must be numbers' });
+    }
+
+    const favorite = await FavoritePlacesModel.update(req.params.id, req.userId, {
+      name,
+      address,
+      latitude,
+      longitude,
+    });
+    if (!favorite) return res.status(404).json({ error: 'Favorite not found' });
+    res.json({ favorite });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function deleteFavorite(req, res, next) {
   try {
     const deleted = await FavoritePlacesModel.remove(req.params.id, req.userId);

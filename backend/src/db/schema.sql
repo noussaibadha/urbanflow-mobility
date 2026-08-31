@@ -82,3 +82,13 @@ CREATE TABLE IF NOT EXISTS favorite_places (
   longitude DOUBLE PRECISION NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- home_station_id used to reference the "stations" table (bike/scooter dock
+-- stations), which is never seeded in this project — so the "station de
+-- rattachement" selector always had zero options. Real station data lives in
+-- transit_stops (imported from GTFS), so point the FK there instead.
+ALTER TABLE mobility_profiles DROP CONSTRAINT IF EXISTS mobility_profiles_home_station_id_fkey;
+ALTER TABLE mobility_profiles ALTER COLUMN home_station_id TYPE VARCHAR(64) USING home_station_id::VARCHAR(64);
+ALTER TABLE mobility_profiles
+  ADD CONSTRAINT mobility_profiles_home_station_id_fkey
+  FOREIGN KEY (home_station_id) REFERENCES transit_stops(id) ON DELETE SET NULL;

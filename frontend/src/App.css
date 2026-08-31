@@ -9,12 +9,6 @@
   #root {
     padding-bottom: 6rem;
   }
-
-  /* Login/Register render without the nav bar, so they don't need the
-     bottom clearance reserved for the mobile tab bar. */
-  #root:has(.auth-page) {
-    padding-bottom: 2rem;
-  }
 }
 
 .card {
@@ -559,6 +553,55 @@
   cursor: pointer;
 }
 
+/* ---------- Address autocomplete ---------- */
+
+.address-autocomplete {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.address-autocomplete input {
+  width: 100%;
+}
+
+.address-suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--uf-white);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(26, 58, 42, 0.18);
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem;
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 500;
+}
+
+.address-suggestion {
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--uf-ink);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.address-suggestion:hover {
+  background: var(--uf-accent-light);
+}
+
+.address-suggestion-loading {
+  padding: 0.55rem 0.65rem;
+  font-size: 0.85rem;
+  color: var(--uf-ink-soft);
+}
+
 .home-velib-pill {
   position: absolute;
   bottom: 14px;
@@ -698,9 +741,41 @@
 
 .route-summary {
   display: flex;
-  gap: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.5rem;
   margin-bottom: 1rem;
   font-weight: 600;
+}
+
+.route-co2-summary {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.route-co2-stat {
+  flex: 1;
+  background: var(--uf-white);
+  border-radius: 14px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.route-co2-label {
+  font-size: 0.75rem;
+  color: var(--uf-ink-soft);
+}
+
+.route-co2-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--uf-ink);
+}
+
+.route-co2-stat-saved .route-co2-value {
+  color: var(--uf-primary);
 }
 
 .confirm-trip-btn {
@@ -922,6 +997,90 @@
   padding: 1.5rem 0;
 }
 
+.dashboard-cta-btn {
+  display: block;
+  width: fit-content;
+  margin: 0 auto;
+  padding: 0.7em 1.4em;
+  border-radius: 12px;
+  background: var(--uf-primary);
+  color: var(--uf-ink);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.dashboard-cta-btn:hover {
+  background: var(--uf-primary-hover);
+  color: var(--uf-ink);
+}
+
+.dashboard-stats-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.dashboard-stat-tile {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.dashboard-stat-value {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--uf-ink);
+}
+
+.dashboard-stat-label {
+  font-size: 0.78rem;
+  color: var(--uf-ink-soft);
+}
+
+.mode-breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0;
+  font-size: 0.85rem;
+}
+
+.mode-breakdown-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100px;
+  flex-shrink: 0;
+}
+
+.mode-breakdown-label .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 5px;
+}
+
+.mode-breakdown-bar-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(26, 58, 42, 0.08);
+  overflow: hidden;
+}
+
+.mode-breakdown-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+}
+
+.mode-breakdown-count {
+  width: 24px;
+  text-align: right;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
 /* ---------- Favorites ---------- */
 
 .favorites-page {
@@ -994,6 +1153,7 @@
 .favorite-go-btn {
   width: 34px;
   height: 34px;
+  padding: 0;
   border-radius: 17px;
   background: var(--uf-primary);
   display: flex;
@@ -1020,4 +1180,55 @@
 
 .favorite-delete-btn:hover {
   color: var(--uf-error);
+}
+
+.favorite-edit-btn {
+  background: none;
+  border: none;
+  padding: 0.3rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.favorite-edit-btn:hover {
+  opacity: 0.7;
+}
+
+.favorite-edit-form {
+  background: var(--uf-white);
+  border-radius: 16px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.favorite-edit-form input {
+  height: 42px;
+  border-radius: 10px;
+  border: 1.5px solid var(--uf-border);
+  padding: 0 0.75rem;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.favorite-edit-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.favorite-edit-actions button {
+  flex: 1;
+}
+
+.favorite-edit-cancel {
+  background: var(--uf-bg-screen);
+}
+
+.favorite-edit-cancel:hover {
+  background: var(--uf-border);
 }

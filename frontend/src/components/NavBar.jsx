@@ -73,15 +73,11 @@ function NavItem({ to, label, Icon, active, onClick }) {
   )
 }
 
-const HIDDEN_ON = ['/login', '/register']
-
 export function NavBar() {
   const { user } = useAuth()
   const location = useLocation()
 
   const isActive = (path) => location.pathname === path
-
-  if (HIDDEN_ON.includes(location.pathname)) return null
 
   return (
     <nav className="nav-bar">

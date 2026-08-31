@@ -46,10 +46,10 @@ export function Profile() {
   useEffect(() => {
     Promise.all([
       apiRequest('/profile', { auth: true }),
-      apiRequest('/stations'),
+      apiRequest('/transit/stops'),
     ])
-      .then(([profileData, stationsData]) => {
-        setStations(stationsData)
+      .then(([profileData, stopsData]) => {
+        setStations(stopsData.stops)
         if (profileData.profile) {
           setForm({
             preferred_transport: profileData.profile.preferred_transport,
@@ -171,7 +171,7 @@ export function Profile() {
         auth: true,
         body: {
           preferred_transport: form.preferred_transport,
-          home_station_id: form.home_station_id ? Number(form.home_station_id) : null,
+          home_station_id: form.home_station_id || null,
           bio: form.bio,
           eco_priority: form.eco_priority,
           avoid_highways: form.avoid_highways,
