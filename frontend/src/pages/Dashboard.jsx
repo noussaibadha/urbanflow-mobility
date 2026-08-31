@@ -74,7 +74,7 @@ export function Dashboard() {
                 <span className="dashboard-stat-label">Trajets enregistrés</span>
               </div>
               <div className="white-card dashboard-stat-tile">
-                <span className="dashboard-stat-value">{formatDistance(summary.totalDistanceMeters)}</span>
+                <span className="dashboard-stat-value">{formatDistance(summary.totalDistanceMeters ?? 0)}</span>
                 <span className="dashboard-stat-label">Distance parcourue</span>
               </div>
             </div>
@@ -94,7 +94,7 @@ export function Dashboard() {
               </div>
             </div>
 
-            {summary.modeBreakdown.length > 0 && (
+            {summary.modeBreakdown?.length > 0 && (
               <>
                 <div className="card-heading">Répartition par mode</div>
                 <div className="white-card">
