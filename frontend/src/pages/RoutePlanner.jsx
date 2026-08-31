@@ -52,6 +52,9 @@ export function RoutePlanner() {
   const [tripConfirmed, setTripConfirmed] = useState(false)
   const [confirmingTrip, setConfirmingTrip] = useState(false)
 
+  const [metroJourney, setMetroJourney] = useState(null)
+  const [metroJourneyLoading, setMetroJourneyLoading] = useState(false)
+
   useEffect(() => {
     const stop = watchPosition({ onUpdate: setLivePosition, onError: setGeoError })
     return stop
@@ -88,6 +91,7 @@ export function RoutePlanner() {
     setError(null)
     setRouteResult(null)
     setTripConfirmed(false)
+    setMetroJourney(null)
 
     if (useLiveLocation && !livePosition) {
       setError('Position en temps réel indisponible. Autorisez la géolocalisation ou saisissez un départ.')
@@ -111,6 +115,16 @@ export function RoutePlanner() {
       setStart(startPoint)
       setEnd(endPoint)
       setRouteResult(result)
+
+      if (mode === 'public_transport') {
+        setMetroJourneyLoading(true)
+        apiRequest(
+          `/transit/journey?fromLat=${startPoint.lat}&fromLon=${startPoint.lon}&toLat=${endPoint.lat}&toLon=${endPoint.lon}`
+        )
+          .then(setMetroJourney)
+          .catch(() => setMetroJourney({ found: false }))
+          .finally(() => setMetroJourneyLoading(false))
+      }
     } catch (err) {
       setError(err.message)
     } finally {
@@ -214,6 +228,73 @@ export function RoutePlanner() {
               <span className="route-co2-value">{routeResult.co2SavedKg.toFixed(2)} kg</span>
             </div>
           </div>
+
+          {mode === 'public_transport' && (
+            <>
+              <div className="card-heading">Trajet en métro</div>
+              <div className="white-card metro-journey-card">
+                {metroJourneyLoading && <p className="empty-state">Recherche des lignes...</p>}
+
+                {!metroJourneyLoading && metroJourney?.found && (
+                  <>
+                    <div className="metro-journey-step">
+                      <span className="metro-journey-walk">🚶 {formatDistance(metroJourney.fromStation.walkMeters)}</span>
+                      <span>
+                        jusqu'à <strong>{metroJourney.fromStation.name}</strong>
+                      </span>
+                    </div>
+
+                    {metroJourney.sameStation ? (
+                      <div className="metro-journey-step">
+                        <span>Départ et arrivée à la même station.</span>
+                      </div>
+                    ) : metroJourney.direct ? (
+                      <div className="metro-journey-step">
+                        <span className="metro-line-badge" style={{ background: `#${metroJourney.lines[0].color}` }}>
+                          {metroJourney.lines[0].shortName}
+                        </span>
+                        <span>
+                          direction <strong>{metroJourney.toStation.name}</strong>
+                        </span>
+                      </div>
+                    ) : metroJourney.transferFound ? (
+                      <>
+                        <div className="metro-journey-step">
+                          <span className="metro-line-badge" style={{ background: `#${metroJourney.lines[0].color}` }}>
+                            {metroJourney.lines[0].shortName}
+                          </span>
+                          <span>
+                            jusqu'à <strong>{metroJourney.transferStation.name}</strong> (correspondance)
+                          </span>
+                        </div>
+                        <div className="metro-journey-step">
+                          <span className="metro-line-badge" style={{ background: `#${metroJourney.lines[1].color}` }}>
+                            {metroJourney.lines[1].shortName}
+                          </span>
+                          <span>
+                            jusqu'à <strong>{metroJourney.toStation.name}</strong>
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="metro-journey-step">
+                        <span>Aucune ligne directe ou correspondance trouvée entre ces deux stations.</span>
+                      </div>
+                    )}
+
+                    <div className="metro-journey-step">
+                      <span className="metro-journey-walk">🚶 {formatDistance(metroJourney.toStation.walkMeters)}</span>
+                      <span>jusqu'à votre destination</span>
+                    </div>
+                  </>
+                )}
+
+                {!metroJourneyLoading && metroJourney && !metroJourney.found && (
+                  <p className="empty-state">Aucune donnée de ligne disponible pour ce trajet.</p>
+                )}
+              </div>
+            </>
+          )}
 
           {user && (
             <button

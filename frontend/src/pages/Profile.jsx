@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { apiRequest } from '../api/client'
 import { TransportPicker } from '../components/TransportPicker'
+import { StationAutocomplete } from '../components/StationAutocomplete'
 import { PREFERRED_TRANSPORT_OPTIONS, TRANSPORT_MODE_META } from '../lib/transportModes'
 
 function initialsOf(name) {
@@ -251,14 +252,12 @@ export function Profile() {
         <div className="white-card">
           <label>
             Station de rattachement
-            <select name="home_station_id" value={form.home_station_id} onChange={handleChange}>
-              <option value="">Aucune</option>
-              {stations.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            <StationAutocomplete
+              stations={stations}
+              value={form.home_station_id}
+              onChange={(id) => setForm({ ...form, home_station_id: id })}
+              placeholder="Rechercher une station (ex : Châtelet)"
+            />
           </label>
           <label style={{ marginTop: '0.75rem', display: 'block' }}>
             Bio

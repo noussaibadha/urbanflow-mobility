@@ -1,6 +1,7 @@
 import AdmZip from 'adm-zip';
 import { parse } from 'csv-parse/sync';
 import * as TransitStopsModel from '../models/transitStops.model.js';
+import * as TransitStopRoutesModel from '../models/transitStopRoutes.model.js';
 
 // Full regional GTFS feeds (e.g. Île-de-France Mobilités) can list tens of
 // thousands of stops network-wide. For this demo we only keep stops inside
@@ -8,6 +9,17 @@ import * as TransitStopsModel from '../models/transitStops.model.js';
 // while still demonstrating the GTFS integration end to end.
 const PARIS_BBOX = { minLat: 48.815, maxLat: 48.902, minLon: 2.224, maxLon: 2.47 };
 const MAX_STOPS = 2000;
+
+// GTFS route_type: 0=tram, 1=metro, 2=rail (RER/train), 3=bus, ...
+// We only care about rail-based transit for the "métro" journey feature —
+// pulling in every bus line would be noisy and mostly irrelevant here.
+const RAIL_ROUTE_TYPES = new Set([0, 1, 2]);
+
+function loadCsvEntry(zip, filename) {
+  const entry = zip.getEntry(filename);
+  if (!entry) throw new Error(`Le flux GTFS ne contient pas de fichier ${filename}`);
+  return parse(entry.getData().toString('utf-8'), { columns: true, skip_empty_lines: true, trim: true });
+}
 
 export async function importGtfsStatic(feedUrl) {
   const res = await fetch(feedUrl);
@@ -17,18 +29,15 @@ export async function importGtfsStatic(feedUrl) {
 
   const buffer = Buffer.from(await res.arrayBuffer());
   const zip = new AdmZip(buffer);
-  const stopsEntry = zip.getEntry('stops.txt');
-  if (!stopsEntry) {
-    throw new Error('Le flux GTFS ne contient pas de fichier stops.txt');
-  }
 
-  const rows = parse(stopsEntry.getData().toString('utf-8'), {
-    columns: true,
-    skip_empty_lines: true,
-    trim: true,
-  });
+  const stopsRows = loadCsvEntry(zip, 'stops.txt');
 
-  const stops = rows
+  // location_type=1 stop_place rows are the real named stations/hubs (one
+  // entry per physical station, e.g. "Nation", "République"), unlike the
+  // "monomodalStopPlace" ids which only cover a sparse, arbitrary handful of
+  // stops and don't reliably include major hubs.
+  const stations = stopsRows
+    .filter((row) => row.location_type === '1')
     .map((row) => ({
       id: row.stop_id,
       name: row.stop_name,
@@ -45,10 +54,98 @@ export async function importGtfsStatic(feedUrl) {
     )
     .slice(0, MAX_STOPS);
 
-  await TransitStopsModel.replaceAll(stops, feedUrl);
-  return { imported: stops.length, totalInFeed: rows.length };
+  await TransitStopsModel.replaceAll(stations, feedUrl);
+
+  const linesResult = await importTransitLines(zip, stopsRows, stations);
+
+  return { imported: stations.length, totalInFeed: stopsRows.length, ...linesResult };
+}
+
+async function importTransitLines(zip, stopsRows, stations) {
+  const stationIds = new Set(stations.map((s) => s.id));
+
+  // Boardable "quay" stops (location_type=0) whose parent_station is one of
+  // our stations — this is how stop_times.txt actually references a station.
+  const quayToStation = new Map();
+  for (const row of stopsRows) {
+    if (row.location_type === '0' && stationIds.has(row.parent_station)) {
+      quayToStation.set(row.stop_id, row.parent_station);
+    }
+  }
+
+  const routesById = new Map();
+  for (const r of loadCsvEntry(zip, 'routes.txt')) {
+    routesById.set(r.route_id, {
+      shortName: r.route_short_name || r.route_long_name || r.route_id,
+      color: r.route_color || null,
+      type: Number(r.route_type),
+    });
+  }
+
+  const tripToRoute = new Map();
+  for (const t of loadCsvEntry(zip, 'trips.txt')) {
+    tripToRoute.set(t.trip_id, t.route_id);
+  }
+
+  // stop_times.txt is huge (100s of MB) for a region-wide feed, so scan the
+  // decompressed buffer by hand instead of splitting it into a giant array
+  // of rows — we only need two columns (trip_id, stop_id) out of it.
+  const stopTimesEntry = zip.getEntry('stop_times.txt');
+  if (!stopTimesEntry) throw new Error('Le flux GTFS ne contient pas de fichier stop_times.txt');
+  const buffer = stopTimesEntry.getData();
+
+  const stationRoutes = new Map(); // station id -> Set<route_id>
+  const NEWLINE = 0x0a;
+  let lineStart = 0;
+  let tripIdIdx = 0;
+  let stopIdIdx = 5;
+  let headerParsed = false;
+
+  for (let i = 0; i <= buffer.length; i++) {
+    if (i < buffer.length && buffer[i] !== NEWLINE) continue;
+    if (i > lineStart) {
+      const line = buffer.toString('utf-8', lineStart, i);
+      const fields = line[line.length - 1] === '\r' ? line.slice(0, -1).split(',') : line.split(',');
+
+      if (!headerParsed) {
+        tripIdIdx = fields.indexOf('trip_id');
+        stopIdIdx = fields.indexOf('stop_id');
+        headerParsed = true;
+      } else {
+        const stationId = quayToStation.get(fields[stopIdIdx]);
+        if (stationId) {
+          const routeId = tripToRoute.get(fields[tripIdIdx]);
+          const route = routeId && routesById.get(routeId);
+          if (route && RAIL_ROUTE_TYPES.has(route.type)) {
+            let set = stationRoutes.get(stationId);
+            if (!set) {
+              set = new Set();
+              stationRoutes.set(stationId, set);
+            }
+            set.add(routeId);
+          }
+        }
+      }
+    }
+    lineStart = i + 1;
+  }
+
+  const links = [];
+  for (const [stationId, routeIds] of stationRoutes) {
+    for (const routeId of routeIds) {
+      const route = routesById.get(routeId);
+      links.push({ stopId: stationId, routeId, shortName: route.shortName, color: route.color, type: route.type });
+    }
+  }
+
+  await TransitStopRoutesModel.replaceAll(links);
+  return { stationsWithLines: stationRoutes.size, lineLinks: links.length };
 }
 
 export async function listTransitStops() {
   return TransitStopsModel.findAll();
+}
+
+export async function listTransitStopRoutes() {
+  return TransitStopRoutesModel.findAll();
 }

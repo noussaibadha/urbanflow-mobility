@@ -92,3 +92,15 @@ ALTER TABLE mobility_profiles ALTER COLUMN home_station_id TYPE VARCHAR(64) USIN
 ALTER TABLE mobility_profiles
   ADD CONSTRAINT mobility_profiles_home_station_id_fkey
   FOREIGN KEY (home_station_id) REFERENCES transit_stops(id) ON DELETE SET NULL;
+
+-- Which tram/métro/RER lines serve each transit_stops station, derived from
+-- GTFS routes.txt + trips.txt + stop_times.txt at import time. Used to show
+-- a real "which line, which stations, which transfer" métro journey.
+CREATE TABLE IF NOT EXISTS transit_stop_routes (
+  stop_id VARCHAR(64) NOT NULL REFERENCES transit_stops(id) ON DELETE CASCADE,
+  route_id VARCHAR(64) NOT NULL,
+  route_short_name VARCHAR(50),
+  route_color VARCHAR(10),
+  route_type INTEGER,
+  PRIMARY KEY (stop_id, route_id)
+);
