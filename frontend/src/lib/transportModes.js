@@ -1,7 +1,7 @@
 export const PREFERRED_TRANSPORT_OPTIONS = [
   { value: 'bike', label: 'Vélo', color: '#52B788' },
   { value: 'scooter', label: 'Trottinette', color: '#D9A441' },
-  { value: 'public_transport', label: 'Métro', color: '#1A3A2A' },
+  { value: 'public_transport', label: 'TC', color: '#3B6E91' },
   { value: 'car', label: 'Voiture', color: '#7FA98C' },
 ]
 
@@ -9,14 +9,14 @@ export const PLANNER_MODE_OPTIONS = [
   { value: 'walk', label: 'À pied', color: '#6B8F87' },
   { value: 'bike', label: 'Vélo', color: '#52B788' },
   { value: 'scooter', label: 'Trottinette', color: '#D9A441' },
-  { value: 'public_transport', label: 'Métro', color: '#1A3A2A' },
+  { value: 'public_transport', label: 'TC', color: '#3B6E91' },
   { value: 'car', label: 'Voiture', color: '#7FA98C' },
 ]
 
 export const TRANSPORT_MODE_META = {
   bike: { label: 'Vélo', color: '#52B788', emoji: '🚲' },
   scooter: { label: 'Trottinette', color: '#D9A441', emoji: '🛴' },
-  public_transport: { label: 'Métro', color: '#1A3A2A', emoji: '🚇' },
+  public_transport: { label: 'TC', color: '#3B6E91', emoji: '🚏' },
   car: { label: 'Voiture', color: '#7FA98C', emoji: '🚗' },
   walk: { label: 'À pied', color: '#6B8F87', emoji: '🚶' },
 }

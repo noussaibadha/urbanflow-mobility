@@ -5,7 +5,7 @@ const MODE_LABELS = {
   bike: 'Vélo',
   scooter: 'Trottinette',
   car: 'Voiture',
-  public_transport: 'Métro',
+  public_transport: 'TC',
   walk: 'Marche',
 };
 const CAR_CO2_KG_PER_KM = 0.192;

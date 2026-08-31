@@ -407,7 +407,7 @@ export function RoutePlanner() {
                       })
                     ) : (
                       <div className="metro-journey-step">
-                        <span>Aucune ligne directe ou correspondance trouvée entre ces deux stations.</span>
+                        <span>Aucun trajet en transports en commun trouvé pour ce parcours.</span>
                       </div>
                     )}
 
@@ -421,10 +421,10 @@ export function RoutePlanner() {
                 {metroJourney && !metroJourney.found && (
                   <p className="empty-state">
                     {metroJourney.reason === 'no_transit_data'
-                      ? "Aucune donnée de ligne de métro/bus n'est chargée sur ce serveur pour l'instant."
+                      ? "Aucune donnée de ligne de transport en commun n'est chargée sur ce serveur pour l'instant."
                       : metroJourney.reason === 'out_of_coverage'
-                        ? 'Aucun trajet métro trouvé : le départ ou la destination est en dehors de la zone couverte (centre de Paris).'
-                        : 'Aucun trajet en transports en commun trouvé pour ce trajet.'}
+                        ? 'Aucun trajet en transports en commun trouvé : le départ ou la destination est en dehors de la zone couverte (centre de Paris).'
+                        : 'Aucun trajet en transports en commun trouvé pour ce parcours.'}
                   </p>
                 )}
               </div>
