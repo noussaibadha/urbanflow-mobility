@@ -129,7 +129,15 @@ export function RoutePlanner() {
     if (m === 'public_transport') {
       journey = await apiRequest(
         `/transit/journey?fromLat=${startPoint.lat}&fromLon=${startPoint.lon}&toLat=${endPoint.lat}&toLon=${endPoint.lon}`
-      ).catch(() => ({ found: false }))
+      ).catch((err) => ({ found: false, reason: 'request_failed', message: err.message }))
+
+      if (!journey.found) {
+        console.error(
+          `[transit/journey] No public transport journey (reason: ${journey.reason}) for ` +
+            `(${startPoint.lat},${startPoint.lon}) -> (${endPoint.lat},${endPoint.lon}).`,
+          journey
+        )
+      }
     }
     return { mode: m, result, journey }
   }
@@ -411,7 +419,13 @@ export function RoutePlanner() {
                 )}
 
                 {metroJourney && !metroJourney.found && (
-                  <p className="empty-state">Aucune donnée de ligne disponible pour ce trajet.</p>
+                  <p className="empty-state">
+                    {metroJourney.reason === 'no_transit_data'
+                      ? "Aucune donnée de ligne de métro/bus n'est chargée sur ce serveur pour l'instant."
+                      : metroJourney.reason === 'out_of_coverage'
+                        ? 'Aucun trajet métro trouvé : le départ ou la destination est en dehors de la zone couverte (centre de Paris).'
+                        : 'Aucun trajet en transports en commun trouvé pour ce trajet.'}
+                  </p>
                 )}
               </div>
             </>

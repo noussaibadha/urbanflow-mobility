@@ -6,6 +6,10 @@ import {
 } from '../services/gtfs.service.js';
 
 const EARTH_RADIUS_M = 6371000;
+// Beyond this, "nearest station" stops being a meaningful walk — treat it as
+// outside the GTFS import's coverage area (central Paris) rather than
+// silently proposing a station that's actually kilometers away.
+const MAX_WALK_TO_STATION_METERS = 3000;
 
 function haversineMeters(lat1, lon1, lat2, lon2) {
   const toRad = (deg) => (deg * Math.PI) / 180;
@@ -130,11 +134,31 @@ export async function getJourney(req, res, next) {
       .map((s) => ({ ...s, routes: routesByStop.get(s.id) }));
 
     if (stations.length === 0) {
+      console.error(
+        `[transit/journey] No station has any route linked (${stops.length} stops, ${links.length} stop_routes links, ` +
+          `${routeDirections.length} route_directions). The GTFS import likely hasn't been run against this database — ` +
+          `see backend/scripts/run-gtfs-import.mjs / POST /api/transit/import.`
+      );
       return res.json({ found: false, reason: 'no_transit_data' });
     }
 
     const fromNearest = nearestStation(stations, fromLat, fromLon);
     const toNearest = nearestStation(stations, toLat, toLon);
+
+    if (fromNearest.distanceMeters > MAX_WALK_TO_STATION_METERS || toNearest.distanceMeters > MAX_WALK_TO_STATION_METERS) {
+      console.error(
+        `[transit/journey] Nearest station too far to be useful: from=${Math.round(fromNearest.distanceMeters)}m ` +
+          `(${fromNearest.station.name}), to=${Math.round(toNearest.distanceMeters)}m (${toNearest.station.name}). ` +
+          `Requested points (${fromLat},${fromLon}) -> (${toLat},${toLon}) are likely outside the GTFS import's ` +
+          `coverage area (central Paris).`
+      );
+      return res.json({
+        found: false,
+        reason: 'out_of_coverage',
+        fromDistanceMeters: Math.round(fromNearest.distanceMeters),
+        toDistanceMeters: Math.round(toNearest.distanceMeters),
+      });
+    }
 
     const fromStation = fromNearest.station;
     const toStation = toNearest.station;
