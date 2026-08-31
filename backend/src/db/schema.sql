@@ -104,3 +104,18 @@ CREATE TABLE IF NOT EXISTS transit_stop_routes (
   route_type INTEGER,
   PRIMARY KEY (stop_id, route_id)
 );
+
+-- One row per (route, direction), so we can tell a rider which terminus to
+-- board towards — e.g. "ligne 1 direction La Défense" — instead of just
+-- naming the line. station_sequence is the ordered list of transit_stops.id
+-- (comma-separated) visited by a representative trip in that direction,
+-- derived from GTFS stop_times.txt stop_sequence at import time.
+CREATE TABLE IF NOT EXISTS transit_route_directions (
+  route_id VARCHAR(64) NOT NULL,
+  direction_id VARCHAR(4) NOT NULL,
+  headsign VARCHAR(200),
+  route_short_name VARCHAR(50),
+  route_color VARCHAR(10),
+  station_sequence TEXT NOT NULL,
+  PRIMARY KEY (route_id, direction_id)
+);

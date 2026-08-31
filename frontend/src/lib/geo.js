@@ -22,11 +22,12 @@ const AVERAGE_SPEED_MS = {
   public_transport: 6.9, // ~25 km/h average incl. station stops
 }
 
-// kg of CO2 per km travelled, used to estimate emissions and savings vs car.
-const CO2_KG_PER_KM = {
-  car: 0.192,
-  public_transport: 0.004,
-  scooter: 0.006,
+// Grams of CO2 per km travelled, used to estimate emissions and savings vs
+// car (rough ADEME-style approximations).
+const CO2_G_PER_KM = {
+  car: 120,
+  public_transport: 4, // métro/RER
+  scooter: 0,
   bike: 0,
   walk: 0,
 }
@@ -75,16 +76,16 @@ export async function getRoute({ start, end, mode }) {
   const durationSeconds = speed ? route.distance / speed : route.duration
 
   const distanceKm = route.distance / 1000
-  const co2Factor = CO2_KG_PER_KM[mode] ?? CO2_KG_PER_KM.car
-  const co2UsedKg = Math.round(distanceKm * co2Factor * 100) / 100
-  const co2SavedKg = Math.round(Math.max(0, distanceKm * (CO2_KG_PER_KM.car - co2Factor)) * 100) / 100
+  const co2Factor = CO2_G_PER_KM[mode] ?? CO2_G_PER_KM.car
+  const co2Grams = Math.round(distanceKm * co2Factor)
+  const co2SavedGrams = Math.round(Math.max(0, distanceKm * (CO2_G_PER_KM.car - co2Factor)))
 
   return {
     path,
     distanceMeters: route.distance,
     durationSeconds,
-    co2UsedKg,
-    co2SavedKg,
+    co2Grams,
+    co2SavedGrams,
   }
 }
 

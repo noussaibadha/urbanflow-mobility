@@ -6,9 +6,21 @@ import { AddressAutocomplete } from '../components/AddressAutocomplete'
 import { geocode, getRoute, watchPosition } from '../lib/geo'
 import { apiRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
-import { PLANNER_MODE_OPTIONS } from '../lib/transportModes'
+import { PLANNER_MODE_OPTIONS, TRANSPORT_MODE_META, ROUTE_TYPE_META } from '../lib/transportModes'
 
 const SHARED_MOBILITY_REFRESH_MS = 60_000
+
+// Modes tried for the "other options" list, in priority order — the
+// currently selected mode is always included first, then this list is used
+// to fill up to 4 total. Scooter is de-prioritized since its route is
+// identical to bike's (same OSRM profile), just faster.
+const ALTERNATIVE_MODE_ORDER = ['public_transport', 'bike', 'walk', 'car', 'scooter']
+const MAX_ALTERNATIVES = 4
+
+function pickAlternativeModes(selectedMode) {
+  const modes = [selectedMode, ...ALTERNATIVE_MODE_ORDER.filter((m) => m !== selectedMode)]
+  return modes.slice(0, MAX_ALTERNATIVES)
+}
 
 function formatDistance(meters) {
   return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${Math.round(meters)} m`
@@ -20,9 +32,14 @@ function formatDuration(seconds) {
   return `${Math.floor(minutes / 60)} h ${minutes % 60} min`
 }
 
-function formatArrivalTime(seconds) {
-  const arrival = new Date(Date.now() + seconds * 1000)
-  return arrival.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+function formatTime(date) {
+  return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+}
+
+function formatCO2(grams) {
+  if (grams <= 0) return '0 g CO₂'
+  if (grams >= 1000) return `${(grams / 1000).toFixed(1)} kg CO₂`
+  return `${grams} g CO₂`
 }
 
 export function RoutePlanner() {
@@ -35,11 +52,22 @@ export function RoutePlanner() {
   const [useLiveLocation, setUseLiveLocation] = useState(true)
   const [departureText, setDepartureText] = useState('')
   const [destinationText, setDestinationText] = useState('')
+  // Set when the user picks a suggestion from the address autocomplete, so we
+  // can reuse its lat/lon directly instead of re-geocoding the full Nominatim
+  // display_name (which is often too verbose for Nominatim to match again).
+  // Cleared whenever the text is edited by hand so it never goes stale.
+  const [departurePoint, setDeparturePoint] = useState(null)
+  const [destinationPoint, setDestinationPoint] = useState(null)
   const [mode, setMode] = useState('bike')
 
   const [start, setStart] = useState(null)
   const [end, setEnd] = useState(null)
+  const [departureTime, setDepartureTime] = useState(null)
   const [routeResult, setRouteResult] = useState(null)
+  // One entry per successfully computed mode from the last "Calculer" click —
+  // powers the alternatives list. The currently displayed routeResult/
+  // metroJourney always mirrors whichever entry matches `mode`.
+  const [alternatives, setAlternatives] = useState([])
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -53,7 +81,6 @@ export function RoutePlanner() {
   const [confirmingTrip, setConfirmingTrip] = useState(false)
 
   const [metroJourney, setMetroJourney] = useState(null)
-  const [metroJourneyLoading, setMetroJourneyLoading] = useState(false)
 
   useEffect(() => {
     const stop = watchPosition({ onUpdate: setLivePosition, onError: setGeoError })
@@ -63,7 +90,9 @@ export function RoutePlanner() {
   useEffect(() => {
     const prefillTo = location.state?.prefillTo
     const prefillMode = location.state?.prefillMode
+    const prefillPoint = location.state?.prefillPoint
     if (prefillTo) setDestinationText(prefillTo)
+    if (prefillPoint?.lat != null && prefillPoint?.lon != null) setDestinationPoint(prefillPoint)
     if (prefillMode) setMode(prefillMode)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -86,10 +115,30 @@ export function RoutePlanner() {
     return () => clearInterval(interval)
   }, [])
 
+  function selectAlternative(selectedMode, list) {
+    const entry = list.find((a) => a.mode === selectedMode) || list[0]
+    if (!entry) return
+    setMode(entry.mode)
+    setRouteResult(entry.result)
+    setMetroJourney(entry.journey || null)
+  }
+
+  async function computeRouteForMode(startPoint, endPoint, m) {
+    const result = await getRoute({ start: startPoint, end: endPoint, mode: m })
+    let journey = null
+    if (m === 'public_transport') {
+      journey = await apiRequest(
+        `/transit/journey?fromLat=${startPoint.lat}&fromLon=${startPoint.lon}&toLat=${endPoint.lat}&toLon=${endPoint.lon}`
+      ).catch(() => ({ found: false }))
+    }
+    return { mode: m, result, journey }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
     setError(null)
     setRouteResult(null)
+    setAlternatives([])
     setTripConfirmed(false)
     setMetroJourney(null)
 
@@ -106,25 +155,29 @@ export function RoutePlanner() {
     try {
       const startPoint = useLiveLocation
         ? { ...livePosition, label: 'Ma position' }
-        : await geocode(departureText)
+        : departurePoint || (await geocode(departureText))
 
-      const endPoint = await geocode(destinationText)
-
-      const result = await getRoute({ start: startPoint, end: endPoint, mode })
+      const endPoint = destinationPoint || (await geocode(destinationText))
 
       setStart(startPoint)
       setEnd(endPoint)
-      setRouteResult(result)
+      setDepartureTime(new Date())
 
-      if (mode === 'public_transport') {
-        setMetroJourneyLoading(true)
-        apiRequest(
-          `/transit/journey?fromLat=${startPoint.lat}&fromLon=${startPoint.lon}&toLat=${endPoint.lat}&toLon=${endPoint.lon}`
+      const modesToTry = pickAlternativeModes(mode)
+      const computed = await Promise.all(
+        modesToTry.map((m) =>
+          computeRouteForMode(startPoint, endPoint, m).catch((err) => ({ mode: m, error: err.message }))
         )
-          .then(setMetroJourney)
-          .catch(() => setMetroJourney({ found: false }))
-          .finally(() => setMetroJourneyLoading(false))
+      )
+
+      const successes = computed.filter((c) => c.result)
+      if (successes.length === 0) {
+        setError(computed[0]?.error || 'Aucun itinéraire trouvé entre ces deux points.')
+        return
       }
+
+      setAlternatives(successes)
+      selectAlternative(mode, successes)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -156,6 +209,8 @@ export function RoutePlanner() {
     }
   }
 
+  const modeMeta = TRANSPORT_MODE_META[mode] ?? { label: mode, color: '#52B788', emoji: '📍' }
+
   return (
     <div className="planner-page">
       <div className="planner-header-card">
@@ -176,7 +231,11 @@ export function RoutePlanner() {
               <span className="dot" style={{ background: '#52B788' }} />
               <AddressAutocomplete
                 value={departureText}
-                onChange={setDepartureText}
+                onChange={(text) => {
+                  setDepartureText(text)
+                  setDeparturePoint(null)
+                }}
+                onSelect={setDeparturePoint}
                 placeholder="Départ"
                 required={!useLiveLocation}
               />
@@ -187,7 +246,11 @@ export function RoutePlanner() {
             <span className="dot" style={{ background: '#B7E4C7' }} />
             <AddressAutocomplete
               value={destinationText}
-              onChange={setDestinationText}
+              onChange={(text) => {
+                setDestinationText(text)
+                setDestinationPoint(null)
+              }}
+              onSelect={setDestinationPoint}
               placeholder="Destination"
               required
             />
@@ -212,30 +275,94 @@ export function RoutePlanner() {
 
       {routeResult && (
         <>
-          <div className="route-summary">
-            <span>Distance : {formatDistance(routeResult.distanceMeters)}</span>
-            <span>Durée estimée : {formatDuration(routeResult.durationSeconds)}</span>
-            <span>Arrivée estimée : {formatArrivalTime(routeResult.durationSeconds)}</span>
+          <div className="route-result-card">
+            <div className="route-result-mode">
+              <span className="route-result-mode-badge" style={{ background: modeMeta.color }}>
+                {modeMeta.emoji}
+              </span>
+              <span className="route-result-mode-label">{modeMeta.label}</span>
+            </div>
+
+            <div className="route-result-stats">
+              <div className="route-result-stat">
+                <span className="route-result-stat-value">{formatDuration(routeResult.durationSeconds)}</span>
+                <span className="route-result-stat-label">Durée</span>
+              </div>
+              <div className="route-result-stat">
+                <span className="route-result-stat-value">{formatDistance(routeResult.distanceMeters)}</span>
+                <span className="route-result-stat-label">Distance</span>
+              </div>
+              <div className="route-result-stat">
+                <span className="route-result-stat-value">{formatCO2(routeResult.co2Grams)}</span>
+                <span className="route-result-stat-label">Émis</span>
+              </div>
+            </div>
+
+            <div className="route-result-footer">
+              <span>
+                Arrivée estimée à{' '}
+                {formatTime(new Date(departureTime.getTime() + routeResult.durationSeconds * 1000))}
+              </span>
+              {routeResult.co2SavedGrams > 0 && (
+                <span>· {formatCO2(routeResult.co2SavedGrams)} économisés vs voiture</span>
+              )}
+            </div>
           </div>
 
-          <div className="route-co2-summary">
-            <div className="route-co2-stat">
-              <span className="route-co2-label">CO₂ émis</span>
-              <span className="route-co2-value">{routeResult.co2UsedKg.toFixed(2)} kg</span>
-            </div>
-            <div className="route-co2-stat route-co2-stat-saved">
-              <span className="route-co2-label">CO₂ économisé vs voiture</span>
-              <span className="route-co2-value">{routeResult.co2SavedKg.toFixed(2)} kg</span>
-            </div>
-          </div>
+          {alternatives.length > 1 && (
+            <>
+              <div className="card-heading">Autres options</div>
+              <div className="route-alt-list">
+                {alternatives.map((alt) => {
+                  const altMeta = TRANSPORT_MODE_META[alt.mode] ?? { label: alt.mode, color: '#52B788', emoji: '📍' }
+                  const arrival = new Date(departureTime.getTime() + alt.result.durationSeconds * 1000)
+                  const legs =
+                    alt.mode === 'public_transport' && alt.journey?.found && !alt.journey.sameStation
+                      ? alt.journey.legs
+                      : []
+
+                  return (
+                    <button
+                      type="button"
+                      key={alt.mode}
+                      className={`route-alt-card${alt.mode === mode ? ' active' : ''}`}
+                      onClick={() => selectAlternative(alt.mode, alternatives)}
+                    >
+                      <div className="route-alt-times">
+                        <span>
+                          {formatTime(departureTime)} → {formatTime(arrival)}
+                        </span>
+                        <span className="route-alt-duration">{formatDuration(alt.result.durationSeconds)}</span>
+                      </div>
+                      <div className="route-alt-preview">
+                        {legs.length > 0 ? (
+                          <>
+                            <span>🚶</span>
+                            {legs.map((leg, i) => (
+                              <span key={i} className="route-alt-line-badge" style={{ background: `#${leg.color}` }}>
+                                {leg.shortName}
+                              </span>
+                            ))}
+                            <span>🚶</span>
+                          </>
+                        ) : (
+                          <span className="route-alt-mode-emoji">{altMeta.emoji}</span>
+                        )}
+                        <span className="route-alt-mode-label">{altMeta.label}</span>
+                      </div>
+                      <div className="route-alt-co2">{formatCO2(alt.result.co2Grams)}</div>
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          )}
 
           {mode === 'public_transport' && (
             <>
-              <div className="card-heading">Trajet en métro</div>
+              <div className="card-heading">Trajet en transports en commun</div>
               <div className="white-card metro-journey-card">
-                {metroJourneyLoading && <p className="empty-state">Recherche des lignes...</p>}
-
-                {!metroJourneyLoading && metroJourney?.found && (
+                {metroJourney?.found && (
                   <>
                     <div className="metro-journey-step">
                       <span className="metro-journey-walk">🚶 {formatDistance(metroJourney.fromStation.walkMeters)}</span>
@@ -248,34 +375,28 @@ export function RoutePlanner() {
                       <div className="metro-journey-step">
                         <span>Départ et arrivée à la même station.</span>
                       </div>
-                    ) : metroJourney.direct ? (
-                      <div className="metro-journey-step">
-                        <span className="metro-line-badge" style={{ background: `#${metroJourney.lines[0].color}` }}>
-                          {metroJourney.lines[0].shortName}
-                        </span>
-                        <span>
-                          direction <strong>{metroJourney.toStation.name}</strong>
-                        </span>
-                      </div>
-                    ) : metroJourney.transferFound ? (
-                      <>
-                        <div className="metro-journey-step">
-                          <span className="metro-line-badge" style={{ background: `#${metroJourney.lines[0].color}` }}>
-                            {metroJourney.lines[0].shortName}
-                          </span>
-                          <span>
-                            jusqu'à <strong>{metroJourney.transferStation.name}</strong> (correspondance)
-                          </span>
-                        </div>
-                        <div className="metro-journey-step">
-                          <span className="metro-line-badge" style={{ background: `#${metroJourney.lines[1].color}` }}>
-                            {metroJourney.lines[1].shortName}
-                          </span>
-                          <span>
-                            jusqu'à <strong>{metroJourney.toStation.name}</strong>
-                          </span>
-                        </div>
-                      </>
+                    ) : metroJourney.legs.length > 0 ? (
+                      metroJourney.legs.map((leg, i) => {
+                        const typeMeta = ROUTE_TYPE_META[leg.type]
+                        return (
+                          <div className="metro-journey-step" key={i}>
+                            <span className="metro-line-badge" style={{ background: `#${leg.color}` }}>
+                              {typeMeta ? `${typeMeta.emoji} ` : ''}
+                              {leg.shortName}
+                            </span>
+                            <span>
+                              {i > 0 && <>correspondance · </>}
+                              {typeMeta ? <>{typeMeta.label} </> : null}
+                              {leg.headsign ? (
+                                <>
+                                  direction <strong>{leg.headsign}</strong>,{' '}
+                                </>
+                              ) : null}
+                              station <strong>{leg.board}</strong> → <strong>{leg.alight}</strong>
+                            </span>
+                          </div>
+                        )
+                      })
                     ) : (
                       <div className="metro-journey-step">
                         <span>Aucune ligne directe ou correspondance trouvée entre ces deux stations.</span>
@@ -289,7 +410,7 @@ export function RoutePlanner() {
                   </>
                 )}
 
-                {!metroJourneyLoading && metroJourney && !metroJourney.found && (
+                {metroJourney && !metroJourney.found && (
                   <p className="empty-state">Aucune donnée de ligne disponible pour ce trajet.</p>
                 )}
               </div>

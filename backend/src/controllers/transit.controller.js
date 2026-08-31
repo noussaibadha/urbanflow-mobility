@@ -1,4 +1,9 @@
-import { importGtfsStatic, listTransitStops, listTransitStopRoutes } from '../services/gtfs.service.js';
+import {
+  importGtfsStatic,
+  listTransitStops,
+  listTransitStopRoutes,
+  listTransitRouteDirections,
+} from '../services/gtfs.service.js';
 
 const EARTH_RADIUS_M = 6371000;
 
@@ -24,10 +29,68 @@ function nearestStation(stations, lat, lon) {
   return best ? { station: best, distanceMeters: bestDist } : null;
 }
 
+// Picks the (route, direction) whose station_sequence visits fromStationId
+// before toStationId, so we can tell the rider which terminus to board
+// towards. Falls back to the first known direction if the order can't be
+// determined (e.g. the representative trip didn't cover both stations).
+function resolveDirection(directionsByRoute, routeId, fromStationId, toStationId) {
+  const candidates = directionsByRoute.get(routeId) || [];
+  for (const d of candidates) {
+    const seq = d.station_sequence.split(',');
+    const fromIdx = seq.indexOf(fromStationId);
+    const toIdx = seq.indexOf(toStationId);
+    if (fromIdx !== -1 && toIdx !== -1 && fromIdx < toIdx) {
+      return d;
+    }
+  }
+  return candidates[0] || null;
+}
+
+function buildLeg(directionsByRoute, route, fromStationId, toStationId, boardName, alightName) {
+  const direction = resolveDirection(directionsByRoute, route.route_id, fromStationId, toStationId);
+  return {
+    shortName: route.route_short_name,
+    color: route.route_color,
+    type: route.route_type,
+    headsign: direction?.headsign || null,
+    board: boardName,
+    alight: alightName,
+  };
+}
+
+// When several route types serve the same station (e.g. a hub with both
+// métro and bus), pick one "headline" type to color the map marker with —
+// métro and RER read as more useful landmarks than the bus routes that
+// happen to also stop there.
+const DOMINANT_TYPE_PRIORITY = [1, 0, 2, 3];
+
+function dominantRouteType(routeTypes) {
+  for (const type of DOMINANT_TYPE_PRIORITY) {
+    if (routeTypes.has(type)) return type;
+  }
+  return null;
+}
+
 export async function getStops(req, res, next) {
   try {
-    const stops = await listTransitStops();
-    res.json({ stops });
+    const [stops, links] = await Promise.all([listTransitStops(), listTransitStopRoutes()]);
+
+    const typesByStop = new Map();
+    for (const link of links) {
+      if (!typesByStop.has(link.stop_id)) typesByStop.set(link.stop_id, new Set());
+      typesByStop.get(link.stop_id).add(link.route_type);
+    }
+
+    const enriched = stops.map((s) => {
+      const types = typesByStop.get(s.id);
+      return {
+        ...s,
+        routeTypes: types ? [...types] : [],
+        dominantType: types ? dominantRouteType(types) : null,
+      };
+    });
+
+    res.json({ stops: enriched });
   } catch (err) {
     next(err);
   }
@@ -44,12 +107,22 @@ export async function getJourney(req, res, next) {
       return res.status(400).json({ error: 'fromLat, fromLon, toLat and toLon are required numbers' });
     }
 
-    const [stops, links] = await Promise.all([listTransitStops(), listTransitStopRoutes()]);
+    const [stops, links, routeDirections] = await Promise.all([
+      listTransitStops(),
+      listTransitStopRoutes(),
+      listTransitRouteDirections(),
+    ]);
 
     const routesByStop = new Map();
     for (const link of links) {
       if (!routesByStop.has(link.stop_id)) routesByStop.set(link.stop_id, []);
       routesByStop.get(link.stop_id).push(link);
+    }
+
+    const directionsByRoute = new Map();
+    for (const d of routeDirections) {
+      if (!directionsByRoute.has(d.route_id)) directionsByRoute.set(d.route_id, []);
+      directionsByRoute.get(d.route_id).push(d);
     }
 
     const stations = stops
@@ -66,31 +139,24 @@ export async function getJourney(req, res, next) {
     const fromStation = fromNearest.station;
     const toStation = toNearest.station;
 
-    if (fromStation.id === toStation.id) {
-      return res.json({
-        found: true,
-        direct: true,
-        sameStation: true,
-        fromStation: { id: fromStation.id, name: fromStation.name, walkMeters: Math.round(fromNearest.distanceMeters) },
-        toStation: { id: toStation.id, name: toStation.name, walkMeters: Math.round(toNearest.distanceMeters) },
-        lines: fromStation.routes.map((r) => ({ shortName: r.route_short_name, color: r.route_color })),
-      });
-    }
-
-    const fromRouteIds = new Set(fromStation.routes.map((r) => r.route_id));
-    const sharedRoutes = toStation.routes.filter((r) => fromRouteIds.has(r.route_id));
-
     const baseResponse = {
       found: true,
       fromStation: { id: fromStation.id, name: fromStation.name, walkMeters: Math.round(fromNearest.distanceMeters) },
       toStation: { id: toStation.id, name: toStation.name, walkMeters: Math.round(toNearest.distanceMeters) },
     };
 
-    if (sharedRoutes.length > 0) {
+    if (fromStation.id === toStation.id) {
+      return res.json({ ...baseResponse, direct: true, sameStation: true, legs: [] });
+    }
+
+    const fromRouteIds = new Set(fromStation.routes.map((r) => r.route_id));
+    const sharedRoute = toStation.routes.find((r) => fromRouteIds.has(r.route_id));
+
+    if (sharedRoute) {
       return res.json({
         ...baseResponse,
         direct: true,
-        lines: sharedRoutes.map((r) => ({ shortName: r.route_short_name, color: r.route_color })),
+        legs: [buildLeg(directionsByRoute, sharedRoute, fromStation.id, toStation.id, fromStation.name, toStation.name)],
       });
     }
 
@@ -118,17 +184,18 @@ export async function getJourney(req, res, next) {
     }
 
     if (!bestTransfer) {
-      return res.json({ ...baseResponse, direct: false, transferFound: false, lines: [] });
+      return res.json({ ...baseResponse, direct: false, transferFound: false, legs: [] });
     }
 
+    const { candidate, lineFromOrigin, lineToDestination } = bestTransfer;
     res.json({
       ...baseResponse,
       direct: false,
       transferFound: true,
-      transferStation: { id: bestTransfer.candidate.id, name: bestTransfer.candidate.name },
-      lines: [
-        { shortName: bestTransfer.lineFromOrigin.route_short_name, color: bestTransfer.lineFromOrigin.route_color },
-        { shortName: bestTransfer.lineToDestination.route_short_name, color: bestTransfer.lineToDestination.route_color },
+      transferStation: { id: candidate.id, name: candidate.name },
+      legs: [
+        buildLeg(directionsByRoute, lineFromOrigin, fromStation.id, candidate.id, fromStation.name, candidate.name),
+        buildLeg(directionsByRoute, lineToDestination, candidate.id, toStation.id, candidate.name, toStation.name),
       ],
     });
   } catch (err) {

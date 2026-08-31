@@ -50,8 +50,8 @@ export function Home() {
       .catch(() => setFavorites([]))
   }, [user])
 
-  function goToPlanner(destination) {
-    navigate('/planner', { state: { prefillTo: destination } })
+  function goToPlanner(destination, point) {
+    navigate('/planner', { state: { prefillTo: destination, prefillPoint: point } })
   }
 
   function handleSearchSubmit(e) {
@@ -74,7 +74,7 @@ export function Home() {
           <AddressAutocomplete
             value={searchText}
             onChange={setSearchText}
-            onSelect={(suggestion) => goToPlanner(suggestion.label)}
+            onSelect={(suggestion) => goToPlanner(suggestion.label, suggestion)}
             placeholder="Où allez-vous ?"
           />
         </form>
@@ -88,9 +88,9 @@ export function Home() {
             className="favorite-item"
             role="button"
             tabIndex={0}
-            onClick={() => goToPlanner(fav.address)}
+            onClick={() => goToPlanner(fav.address, { lat: fav.latitude, lon: fav.longitude, label: fav.address })}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') goToPlanner(fav.address)
+              if (e.key === 'Enter') goToPlanner(fav.address, { lat: fav.latitude, lon: fav.longitude, label: fav.address })
             }}
           >
             <div className="favorite-item-icon">

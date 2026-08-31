@@ -31,3 +31,33 @@ export const transitStopIcon = L.divIcon({
   iconSize: [22, 22],
   iconAnchor: [11, 11],
 })
+
+// One marker style per GTFS route_type (0=tram, 1=métro, 2=RER, 3=bus), so
+// the map visually distinguishes what actually serves each station instead
+// of a single generic "transit stop" pin.
+const TRANSIT_TYPE_ICON_STYLE = {
+  0: { emoji: '🚊', className: 'transit-stop-marker transit-stop-tram' },
+  1: { emoji: '🚇', className: 'transit-stop-marker transit-stop-metro' },
+  2: { emoji: '🚆', className: 'transit-stop-marker transit-stop-rer' },
+  3: { emoji: '🚌', className: 'transit-stop-marker transit-stop-bus' },
+}
+
+const transitTypeIconCache = new Map()
+
+export function transitStopIconForType(dominantType) {
+  const style = TRANSIT_TYPE_ICON_STYLE[dominantType]
+  if (!style) return transitStopIcon
+
+  if (!transitTypeIconCache.has(dominantType)) {
+    transitTypeIconCache.set(
+      dominantType,
+      L.divIcon({
+        className: style.className,
+        html: `<span class="transit-stop-dot">${style.emoji}</span>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+      })
+    )
+  }
+  return transitTypeIconCache.get(dominantType)
+}

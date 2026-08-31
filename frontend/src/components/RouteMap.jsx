@@ -4,7 +4,8 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-
 import L from 'leaflet'
 import 'leaflet.markercluster'
 import '../lib/leafletIcons'
-import { liveLocationIcon, sharedMobilityIcon, transitStopIcon } from '../lib/leafletIcons'
+import { liveLocationIcon, sharedMobilityIcon, transitStopIconForType } from '../lib/leafletIcons'
+import { ROUTE_TYPE_META } from '../lib/transportModes'
 
 const PARIS_CENTER = [48.8566, 2.3522]
 
@@ -22,11 +23,12 @@ function sharedStationPopup(station) {
 }
 
 function transitStopPopup(stop) {
+  const typeLabels = (stop.routeTypes || []).map((t) => ROUTE_TYPE_META[t]?.label).filter(Boolean)
   return (
     <div>
       <strong>{stop.name}</strong>
       <br />
-      Arrêt de transport en commun
+      {typeLabels.length > 0 ? typeLabels.join(', ') : 'Arrêt de transport en commun'}
     </div>
   )
 }
@@ -46,21 +48,21 @@ function FitToRoute({ path, livePosition }) {
   return null
 }
 
-function ClusteredMarkers({ items, icon, popupContent }) {
+function ClusteredMarkers({ items, icon, getIcon, popupContent }) {
   const map = useMap()
 
   useEffect(() => {
     const clusterGroup = L.markerClusterGroup({ maxClusterRadius: 60 })
 
     for (const item of items) {
-      const marker = L.marker([item.lat, item.lon], { icon })
+      const marker = L.marker([item.lat, item.lon], { icon: getIcon ? getIcon(item) : icon })
       marker.bindPopup(renderToStaticMarkup(popupContent(item)))
       clusterGroup.addLayer(marker)
     }
 
     map.addLayer(clusterGroup)
     return () => map.removeLayer(clusterGroup)
-  }, [items, icon, popupContent, map])
+  }, [items, icon, getIcon, popupContent, map])
 
   return null
 }
@@ -106,7 +108,11 @@ export function RouteMap({ livePosition, start, end, path, sharedStations = [], 
 
       <ClusteredMarkers items={sharedItems} icon={sharedMobilityIcon} popupContent={sharedStationPopup} />
 
-      <ClusteredMarkers items={transitItems} icon={transitStopIcon} popupContent={transitStopPopup} />
+      <ClusteredMarkers
+        items={transitItems}
+        getIcon={(item) => transitStopIconForType(item.dominantType)}
+        popupContent={transitStopPopup}
+      />
 
       <FitToRoute path={path} livePosition={livePosition} />
     </MapContainer>

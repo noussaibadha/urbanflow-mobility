@@ -63,7 +63,9 @@ export function Favorites() {
   }
 
   function handleGo(fav) {
-    navigate('/planner', { state: { prefillTo: fav.address } })
+    navigate('/planner', {
+      state: { prefillTo: fav.address, prefillPoint: { lat: fav.latitude, lon: fav.longitude, label: fav.address } },
+    })
   }
 
   function startEdit(fav) {
