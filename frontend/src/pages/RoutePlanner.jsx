@@ -3,7 +3,8 @@ import { useLocation } from 'react-router-dom'
 import { RouteMap } from '../components/RouteMap'
 import { TransportPicker } from '../components/TransportPicker'
 import { AddressAutocomplete } from '../components/AddressAutocomplete'
-import { geocode, getRoute, watchPosition } from '../lib/geo'
+import { geocode, getRoute, useConsentedLocation, estimateTransitDurationSeconds } from '../lib/geo'
+import { LocationConsentModal } from '../components/LocationConsentModal'
 import { apiRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { PLANNER_MODE_OPTIONS, TRANSPORT_MODE_META, ROUTE_TYPE_META } from '../lib/transportModes'
@@ -12,9 +13,8 @@ const SHARED_MOBILITY_REFRESH_MS = 60_000
 
 // Modes tried for the "other options" list, in priority order — the
 // currently selected mode is always included first, then this list is used
-// to fill up to 4 total. Scooter is de-prioritized since its route is
-// identical to bike's (same OSRM profile), just faster.
-const ALTERNATIVE_MODE_ORDER = ['public_transport', 'bike', 'walk', 'car', 'scooter']
+// to fill up to 4 total.
+const ALTERNATIVE_MODE_ORDER = ['public_transport', 'bike', 'walk', 'car']
 const MAX_ALTERNATIVES = 4
 
 function pickAlternativeModes(selectedMode) {
@@ -46,10 +46,16 @@ export function RoutePlanner() {
   const { user } = useAuth()
   const location = useLocation()
 
-  const [livePosition, setLivePosition] = useState(null)
-  const [geoError, setGeoError] = useState(null)
-
-  const [useLiveLocation, setUseLiveLocation] = useState(true)
+  const {
+    position: livePosition,
+    error: geoError,
+    consent: locationConsent,
+    active: useLiveLocation,
+    showPrompt: showLocationConsent,
+    requestLocation,
+    respondConsent,
+    disable: disableLocation,
+  } = useConsentedLocation()
   const [departureText, setDepartureText] = useState('')
   const [destinationText, setDestinationText] = useState('')
   // Set when the user picks a suggestion from the address autocomplete, so we
@@ -81,11 +87,7 @@ export function RoutePlanner() {
   const [confirmingTrip, setConfirmingTrip] = useState(false)
 
   const [metroJourney, setMetroJourney] = useState(null)
-
-  useEffect(() => {
-    const stop = watchPosition({ onUpdate: setLivePosition, onError: setGeoError })
-    return stop
-  }, [])
+  const [dottBikeInfo, setDottBikeInfo] = useState(null)
 
   useEffect(() => {
     const prefillTo = location.state?.prefillTo
@@ -121,11 +123,17 @@ export function RoutePlanner() {
     setMode(entry.mode)
     setRouteResult(entry.result)
     setMetroJourney(entry.journey || null)
+    setDottBikeInfo(entry.dottBike || null)
   }
 
   async function computeRouteForMode(startPoint, endPoint, m) {
+    // Routing itself is unchanged for every mode, bike included — a real
+    // Dott bike being absent nearby never blocks or alters the route, it
+    // only adds informational detail below when one is found.
     const result = await getRoute({ start: startPoint, end: endPoint, mode: m })
     let journey = null
+    let dottBike = null
+
     if (m === 'public_transport') {
       journey = await apiRequest(
         `/transit/journey?fromLat=${startPoint.lat}&fromLon=${startPoint.lon}&toLat=${endPoint.lat}&toLon=${endPoint.lon}`
@@ -137,9 +145,22 @@ export function RoutePlanner() {
             `(${startPoint.lat},${startPoint.lon}) -> (${endPoint.lat},${endPoint.lon}).`,
           journey
         )
+      } else {
+        // The OSRM foot-profile "route" above is only used for the map path/
+        // distance here — its distance/25km/h duration guess badly
+        // undercounts a real transit trip (no station stops, no wait time).
+        const estimated = estimateTransitDurationSeconds(journey)
+        if (estimated != null) result.durationSeconds = estimated
       }
     }
-    return { mode: m, result, journey }
+
+    if (m === 'bike') {
+      dottBike = await apiRequest(
+        `/shared-mobility/dott-bikes/nearest?lat=${startPoint.lat}&lon=${startPoint.lon}`
+      ).catch((err) => ({ found: false, reason: 'request_failed', message: err.message }))
+    }
+
+    return { mode: m, result, journey, dottBike }
   }
 
   async function handleSubmit(e) {
@@ -149,6 +170,7 @@ export function RoutePlanner() {
     setAlternatives([])
     setTripConfirmed(false)
     setMetroJourney(null)
+    setDottBikeInfo(null)
 
     if (useLiveLocation && !livePosition) {
       setError('Position en temps réel indisponible. Autorisez la géolocalisation ou saisissez un départ.')
@@ -183,6 +205,12 @@ export function RoutePlanner() {
         setError(computed[0]?.error || 'Aucun itinéraire trouvé entre ces deux points.')
         return
       }
+
+      // The mode the user actually picked may have failed (e.g. no scooter
+      // nearby) even though other alternatives succeeded — surface that
+      // explicitly instead of silently switching them to a different mode.
+      const selectedFailure = computed.find((c) => c.mode === mode && c.error)
+      if (selectedFailure) setError(selectedFailure.error)
 
       setAlternatives(successes)
       selectAlternative(mode, successes)
@@ -229,10 +257,16 @@ export function RoutePlanner() {
             <input
               type="checkbox"
               checked={useLiveLocation}
-              onChange={(e) => setUseLiveLocation(e.target.checked)}
+              onChange={(e) => (e.target.checked ? requestLocation() : disableLocation())}
             />
             Utiliser ma position actuelle comme départ
           </label>
+
+          {locationConsent === 'denied' && (
+            <p className="planner-note">
+              Géolocalisation refusée — modifiable depuis votre profil.
+            </p>
+          )}
 
           {!useLiveLocation && (
             <div className="planner-field">
@@ -272,6 +306,10 @@ export function RoutePlanner() {
             itemClassName="planner-mode-pill"
           />
 
+          <p className="planner-note">
+            🛴 Trottinettes non disponibles : service interdit en libre-service à Paris depuis 2023.
+          </p>
+
           {geoError && useLiveLocation && <p className="form-error">{geoError.message}</p>}
           {error && <p className="form-error">{error}</p>}
 
@@ -280,6 +318,10 @@ export function RoutePlanner() {
           </button>
         </form>
       </div>
+
+      {showLocationConsent && (
+        <LocationConsentModal onAllow={() => respondConsent(true)} onDeny={() => respondConsent(false)} />
+      )}
 
       {routeResult && (
         <>
@@ -315,6 +357,12 @@ export function RoutePlanner() {
                 <span>· {formatCO2(routeResult.co2SavedGrams)} économisés vs voiture</span>
               )}
             </div>
+
+            {mode === 'bike' && dottBikeInfo?.found && (
+              <p className="dott-bike-note">
+                🚲 Vélo Dott réel disponible à {formatDistance(dottBikeInfo.walkMeters)} de votre départ
+              </p>
+            )}
           </div>
 
           {alternatives.length > 1 && (

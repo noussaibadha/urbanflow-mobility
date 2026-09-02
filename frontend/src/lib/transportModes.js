@@ -1,6 +1,8 @@
+// No standalone "Trottinette" mode: free-floating scooters have been banned
+// in Paris since September 2023 — Dott's GBFS feed there only lists bikes
+// (see backend/src/services/dottBikes.service.js), folded into "Vélo" below.
 export const PREFERRED_TRANSPORT_OPTIONS = [
   { value: 'bike', label: 'Vélo', color: '#52B788' },
-  { value: 'scooter', label: 'Trottinette', color: '#D9A441' },
   { value: 'public_transport', label: 'TC', color: '#3B6E91' },
   { value: 'car', label: 'Voiture', color: '#7FA98C' },
 ]
@@ -8,7 +10,6 @@ export const PREFERRED_TRANSPORT_OPTIONS = [
 export const PLANNER_MODE_OPTIONS = [
   { value: 'walk', label: 'À pied', color: '#6B8F87' },
   { value: 'bike', label: 'Vélo', color: '#52B788' },
-  { value: 'scooter', label: 'Trottinette', color: '#D9A441' },
   { value: 'public_transport', label: 'TC', color: '#3B6E91' },
   { value: 'car', label: 'Voiture', color: '#7FA98C' },
 ]

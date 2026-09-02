@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { RouteMap } from '../components/RouteMap'
 import { GreetingCard } from '../components/GreetingCard'
 import { AddressAutocomplete } from '../components/AddressAutocomplete'
-import { watchPosition } from '../lib/geo'
+import { useConsentedLocation } from '../lib/geo'
+import { LocationConsentModal } from '../components/LocationConsentModal'
 import { apiRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 
@@ -19,16 +20,19 @@ function PinIcon() {
 export function Home() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [livePosition, setLivePosition] = useState(null)
+  const {
+    position: livePosition,
+    error: geoError,
+    active: locationEnabled,
+    showPrompt: showLocationConsent,
+    requestLocation,
+    respondConsent,
+    disable: disableLocation,
+  } = useConsentedLocation()
   const [sharedStations, setSharedStations] = useState([])
   const [searchText, setSearchText] = useState('')
   const [summary, setSummary] = useState(null)
   const [favorites, setFavorites] = useState(null)
-
-  useEffect(() => {
-    const stop = watchPosition({ onUpdate: setLivePosition, onError: () => {} })
-    return stop
-  }, [])
 
   useEffect(() => {
     apiRequest('/shared-mobility/stations')
@@ -119,6 +123,23 @@ export function Home() {
 
       <div className="home-map-wrap">
         <RouteMap livePosition={livePosition} sharedStations={sharedStations} />
+
+        <button
+          type="button"
+          className={`home-location-pill${locationEnabled ? ' active' : ''}`}
+          onClick={() => (locationEnabled ? disableLocation() : requestLocation())}
+        >
+          <span className="dot" />
+          {locationEnabled ? 'Ma position activée' : 'Activer ma position'}
+        </button>
+
+        {showLocationConsent && (
+          <LocationConsentModal onAllow={() => respondConsent(true)} onDeny={() => respondConsent(false)} />
+        )}
+
+        {geoError && locationEnabled && (
+          <div className="home-velib-pill home-location-error">{geoError.message}</div>
+        )}
 
         <div className="home-velib-pill">
           <span className="dot" />

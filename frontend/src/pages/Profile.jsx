@@ -5,6 +5,7 @@ import { apiRequest } from '../api/client'
 import { TransportPicker } from '../components/TransportPicker'
 import { StationAutocomplete } from '../components/StationAutocomplete'
 import { PREFERRED_TRANSPORT_OPTIONS, TRANSPORT_MODE_META } from '../lib/transportModes'
+import { useLocationConsent } from '../lib/locationConsent'
 
 function initialsOf(name) {
   return (name || '')
@@ -22,6 +23,7 @@ function formatDistance(meters) {
 export function Profile() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [locationConsent, setLocationConsent] = useLocationConsent()
   const [stations, setStations] = useState([])
   const [form, setForm] = useState({
     preferred_transport: 'bike',
@@ -269,6 +271,27 @@ export function Profile() {
         {error && <p className="form-error">{error}</p>}
         <button type="submit">Enregistrer</button>
       </form>
+
+      <div className="section-label">Confidentialité</div>
+      <div className="white-card">
+        <div className="toggle-row">
+          <span className="toggle-label">Géolocalisation</span>
+          <button
+            type="button"
+            className={`toggle-switch${locationConsent === 'granted' ? ' on' : ''}`}
+            onClick={() => setLocationConsent(locationConsent === 'granted' ? 'denied' : 'granted')}
+          >
+            <span className="knob" />
+          </button>
+        </div>
+        <p className="profile-consent-hint">
+          {locationConsent === 'granted'
+            ? "Autorisée — utilisée pour votre position sur la carte et comme point de départ d'itinéraire."
+            : locationConsent === 'denied'
+              ? "Refusée — saisissez votre adresse de départ manuellement dans l'itinéraire."
+              : "Aucun choix enregistré pour l'instant — la question sera posée à la première utilisation."}
+        </p>
+      </div>
 
       {user?.role === 'admin' && (
         <section className="admin-section">

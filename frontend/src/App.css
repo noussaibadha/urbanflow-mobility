@@ -191,6 +191,89 @@
   font-size: 0.85rem;
 }
 
+.planner-note {
+  color: var(--uf-bg-screen);
+  opacity: 0.7;
+  font-size: 0.78rem;
+  margin: -0.25rem 0 0.5rem;
+}
+
+.dott-bike-note {
+  color: var(--uf-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+.profile-consent-hint {
+  color: var(--uf-ink-soft);
+  font-size: 0.8rem;
+  margin: 0.5rem 0 0;
+}
+
+.location-consent-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 58, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 1000;
+}
+
+.location-consent-modal {
+  background: var(--uf-white);
+  border-radius: 20px;
+  padding: 1.5rem;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 20px 50px rgba(26, 58, 42, 0.35);
+}
+
+.location-consent-modal h3 {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--uf-ink);
+}
+
+.location-consent-modal p {
+  margin: 0 0 1.25rem;
+  font-size: 0.9rem;
+  color: var(--uf-ink-soft);
+  line-height: 1.5;
+}
+
+.location-consent-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.location-consent-actions button {
+  flex: 1;
+  border-radius: 12px;
+  padding: 0.7rem 1rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.location-consent-deny {
+  background: var(--uf-bg-screen);
+  color: var(--uf-ink);
+}
+
+.location-consent-allow {
+  background: var(--uf-primary);
+  color: var(--uf-white);
+}
+
+.location-consent-allow:hover {
+  background: var(--uf-primary-hover);
+}
+
 .auth-notice {
   background: rgba(82, 183, 136, 0.14);
   border: 1px solid rgba(82, 183, 136, 0.35);
@@ -661,6 +744,42 @@
   height: 10px;
   border-radius: 5px;
   background: var(--uf-primary);
+}
+
+.home-location-pill {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.92);
+  border: none;
+  border-radius: 12px;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--uf-ink);
+  cursor: pointer;
+}
+
+.home-location-pill .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  background: #9aa5a0;
+}
+
+.home-location-pill.active .dot {
+  background: var(--uf-primary);
+}
+
+.home-location-error {
+  top: 58px;
+  bottom: auto;
+  color: var(--uf-error);
 }
 
 /* ---------- Planner ---------- */
