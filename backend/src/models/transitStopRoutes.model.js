@@ -1,4 +1,5 @@
 import { pool } from '../config/db.js';
+import { insertRowsInBatches } from '../db/bulkInsert.js';
 
 export async function findAll() {
   const { rows } = await pool.query('SELECT * FROM transit_stop_routes');
@@ -11,14 +12,12 @@ export async function replaceAll(links) {
     await client.query('BEGIN');
     await client.query('DELETE FROM transit_stop_routes');
 
-    for (const link of links) {
-      await client.query(
-        `INSERT INTO transit_stop_routes (stop_id, route_id, route_short_name, route_color, route_type)
-         VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (stop_id, route_id) DO NOTHING`,
-        [link.stopId, link.routeId, link.shortName, link.color, link.type]
-      );
-    }
+    await insertRowsInBatches(client, {
+      table: 'transit_stop_routes',
+      columns: ['stop_id', 'route_id', 'route_short_name', 'route_color', 'route_type'],
+      conflictClause: 'ON CONFLICT (stop_id, route_id) DO NOTHING',
+      rows: links.map((link) => [link.stopId, link.routeId, link.shortName, link.color, link.type]),
+    });
 
     await client.query('COMMIT');
   } catch (err) {

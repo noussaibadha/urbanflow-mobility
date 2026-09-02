@@ -52,6 +52,19 @@ function resolveDirection(directionsByRoute, routeId, fromStationId, toStationId
 
 function buildLeg(directionsByRoute, route, fromStationId, toStationId, boardName, alightName) {
   const direction = resolveDirection(directionsByRoute, route.route_id, fromStationId, toStationId);
+
+  // Real GTFS stop_times aren't loaded (see backend/scripts/run-gtfs-import.mjs),
+  // so there's no scheduled ride time — the frontend estimates it from this
+  // station count instead. null when the representative trip's sequence
+  // doesn't cover both stations, so the caller falls back to a default.
+  let stopsCount = null;
+  if (direction) {
+    const seq = direction.station_sequence.split(',');
+    const fromIdx = seq.indexOf(fromStationId);
+    const toIdx = seq.indexOf(toStationId);
+    if (fromIdx !== -1 && toIdx !== -1) stopsCount = Math.abs(toIdx - fromIdx);
+  }
+
   return {
     shortName: route.route_short_name,
     color: route.route_color,
@@ -59,6 +72,7 @@ function buildLeg(directionsByRoute, route, fromStationId, toStationId, boardNam
     headsign: direction?.headsign || null,
     board: boardName,
     alight: alightName,
+    stopsCount,
   };
 }
 
