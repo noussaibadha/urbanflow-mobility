@@ -5,6 +5,7 @@ import { NavBar } from './components/NavBar'
 import { Register } from './pages/Register'
 import { Login } from './pages/Login'
 import { Profile } from './pages/Profile'
+import { Administration } from './pages/Administration'
 import { RoutePlanner } from './pages/RoutePlanner'
 import { Home } from './pages/Home'
 import { Dashboard } from './pages/Dashboard'
@@ -24,6 +25,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/administration"
+          element={
+            <ProtectedRoute requireAdmin>
+              <Administration />
             </ProtectedRoute>
           }
         />

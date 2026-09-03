@@ -62,6 +62,12 @@ ALTER TABLE mobility_profiles ADD COLUMN IF NOT EXISTS eco_priority BOOLEAN NOT 
 ALTER TABLE mobility_profiles ADD COLUMN IF NOT EXISTS avoid_highways BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE mobility_profiles ADD COLUMN IF NOT EXISTS notifications_enabled BOOLEAN NOT NULL DEFAULT true;
 
+-- Replaces the old eco_priority boolean toggle: which of the planner's
+-- already-computed mode comparisons to highlight as "Recommandé" (see
+-- RoutePlanner.jsx). eco_priority itself is left in place, unused, rather
+-- than dropped — this schema only ever adds columns, never drops them.
+ALTER TABLE mobility_profiles ADD COLUMN IF NOT EXISTS route_priority VARCHAR(20) NOT NULL DEFAULT 'fast' CHECK (route_priority IN ('fast', 'eco', 'cheap'));
+
 CREATE TABLE IF NOT EXISTS user_trips (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

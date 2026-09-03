@@ -13,13 +13,39 @@ const SHARED_MOBILITY_REFRESH_MS = 60_000
 
 // Modes tried for the "other options" list, in priority order — the
 // currently selected mode is always included first, then this list is used
-// to fill up to 4 total.
-const ALTERNATIVE_MODE_ORDER = ['public_transport', 'bike', 'walk', 'car']
+// to fill up to 4 total. Scooter is de-prioritized since its route is
+// identical to bike's (same OSRM profile), just a different theoretical pace.
+const ALTERNATIVE_MODE_ORDER = ['public_transport', 'bike', 'walk', 'car', 'scooter']
 const MAX_ALTERNATIVES = 4
 
 function pickAlternativeModes(selectedMode) {
   const modes = [selectedMode, ...ALTERNATIVE_MODE_ORDER.filter((m) => m !== selectedMode)]
   return modes.slice(0, MAX_ALTERNATIVES)
+}
+
+// "Économique" has no real per-mode cost data to compare (see lib/geo.js) —
+// this is a reasonable, non-invented default ordering instead: free modes
+// first, then public transport, car last since it's the only one with real
+// fuel/parking costs.
+const CHEAP_MODE_ORDER = ['walk', 'bike', 'public_transport', 'car']
+
+// Doesn't change what the planner computes or compares — only picks which of
+// the already-computed `successes` to highlight, based on the user's saved
+// profile.route_priority (see Profile.jsx). Returns null when there's no
+// saved preference (logged out, or never set), matching the pre-recommendation behavior.
+function pickRecommendedMode(successes, priority) {
+  if (!priority || successes.length === 0) return null
+
+  if (priority === 'fast') {
+    return successes.reduce((best, c) => (c.result.durationSeconds < best.result.durationSeconds ? c : best)).mode
+  }
+  if (priority === 'eco') {
+    return successes.reduce((best, c) => (c.result.co2Grams < best.result.co2Grams ? c : best)).mode
+  }
+  if (priority === 'cheap') {
+    return CHEAP_MODE_ORDER.find((m) => successes.some((c) => c.mode === m)) ?? null
+  }
+  return null
 }
 
 function formatDistance(meters) {
@@ -88,6 +114,18 @@ export function RoutePlanner() {
 
   const [metroJourney, setMetroJourney] = useState(null)
   const [dottBikeInfo, setDottBikeInfo] = useState(null)
+  const [routePriority, setRoutePriority] = useState(null)
+  const [recommendedMode, setRecommendedMode] = useState(null)
+
+  useEffect(() => {
+    if (!user) {
+      setRoutePriority(null)
+      return
+    }
+    apiRequest('/profile', { auth: true })
+      .then((data) => setRoutePriority(data.profile?.route_priority ?? null))
+      .catch(() => setRoutePriority(null))
+  }, [user])
 
   useEffect(() => {
     const prefillTo = location.state?.prefillTo
@@ -171,6 +209,7 @@ export function RoutePlanner() {
     setTripConfirmed(false)
     setMetroJourney(null)
     setDottBikeInfo(null)
+    setRecommendedMode(null)
 
     if (useLiveLocation && !livePosition) {
       setError('Position en temps réel indisponible. Autorisez la géolocalisation ou saisissez un départ.')
@@ -213,6 +252,7 @@ export function RoutePlanner() {
       if (selectedFailure) setError(selectedFailure.error)
 
       setAlternatives(successes)
+      setRecommendedMode(pickRecommendedMode(successes, routePriority))
       selectAlternative(mode, successes)
     } catch (err) {
       setError(err.message)
@@ -306,10 +346,6 @@ export function RoutePlanner() {
             itemClassName="planner-mode-pill"
           />
 
-          <p className="planner-note">
-            🛴 Trottinettes non disponibles : service interdit en libre-service à Paris depuis 2023.
-          </p>
-
           {geoError && useLiveLocation && <p className="form-error">{geoError.message}</p>}
           {error && <p className="form-error">{error}</p>}
 
@@ -331,6 +367,7 @@ export function RoutePlanner() {
                 {modeMeta.emoji}
               </span>
               <span className="route-result-mode-label">{modeMeta.label}</span>
+              {mode === recommendedMode && <span className="recommended-badge">Recommandé</span>}
             </div>
 
             <div className="route-result-stats">
@@ -384,6 +421,9 @@ export function RoutePlanner() {
                       className={`route-alt-card${alt.mode === mode ? ' active' : ''}`}
                       onClick={() => selectAlternative(alt.mode, alternatives)}
                     >
+                      {alt.mode === recommendedMode && (
+                        <span className="recommended-badge recommended-badge-alt">Recommandé</span>
+                      )}
                       <div className="route-alt-times">
                         <span>
                           {formatTime(departureTime)} → {formatTime(arrival)}

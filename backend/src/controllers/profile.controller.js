@@ -2,6 +2,7 @@ import * as UsersModel from '../models/users.model.js';
 import * as MobilityProfilesModel from '../models/mobilityProfiles.model.js';
 
 const TRANSPORT_OPTIONS = ['bike', 'scooter', 'car', 'public_transport', 'walk'];
+const ROUTE_PRIORITY_OPTIONS = ['fast', 'eco', 'cheap'];
 
 export async function getProfile(req, res, next) {
   try {
@@ -17,12 +18,25 @@ export async function getProfile(req, res, next) {
 
 export async function updateProfile(req, res, next) {
   try {
-    const { preferred_transport, home_station_id, bio, eco_priority, avoid_highways, notifications_enabled } =
-      req.body;
+    const {
+      preferred_transport,
+      home_station_id,
+      bio,
+      eco_priority,
+      avoid_highways,
+      notifications_enabled,
+      route_priority,
+    } = req.body;
 
     if (preferred_transport && !TRANSPORT_OPTIONS.includes(preferred_transport)) {
       return res.status(400).json({
         error: `preferred_transport must be one of: ${TRANSPORT_OPTIONS.join(', ')}`,
+      });
+    }
+
+    if (route_priority && !ROUTE_PRIORITY_OPTIONS.includes(route_priority)) {
+      return res.status(400).json({
+        error: `route_priority must be one of: ${ROUTE_PRIORITY_OPTIONS.join(', ')}`,
       });
     }
 
@@ -33,6 +47,7 @@ export async function updateProfile(req, res, next) {
       eco_priority: eco_priority ?? null,
       avoid_highways: avoid_highways ?? null,
       notifications_enabled: notifications_enabled ?? null,
+      route_priority: route_priority ?? null,
     });
     res.json({ profile });
   } catch (err) {
