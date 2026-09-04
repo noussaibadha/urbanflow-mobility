@@ -16,8 +16,22 @@ function App() {
       <NavBar />
       <main>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/planner" element={<RoutePlanner />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Home />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/planner"
+            element={
+              <ProtectedRoute>
+                <RoutePlanner />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
           <Route
@@ -28,8 +42,22 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/favorites" element={<Favorites />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/favorites"
+            element={
+              <ProtectedRoute>
+                <Favorites />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
