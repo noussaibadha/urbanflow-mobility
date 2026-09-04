@@ -11,26 +11,18 @@ const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search'
 const OSRM_ROUTING_BY_MODE = {
   car: { base: 'https://routing.openstreetmap.de/routed-car', profile: 'driving' },
   bike: { base: 'https://routing.openstreetmap.de/routed-bike', profile: 'bike' },
-  // No dedicated scooter graph exists — bike's is the closest street-level
-  // approximation for a point-to-point ride. This is purely a theoretical
-  // estimate (see AVERAGE_SPEED_MS.scooter below), not a real vehicle search.
-  scooter: { base: 'https://routing.openstreetmap.de/routed-bike', profile: 'bike' },
   walk: { base: 'https://routing.openstreetmap.de/routed-foot', profile: 'foot' },
   public_transport: { base: 'https://routing.openstreetmap.de/routed-foot', profile: 'foot' },
 }
 
 // Average urban speeds (m/s), used to estimate duration for modes whose
-// routing graph doesn't model them distinctly: scooter reuses the bike
-// graph's path but not its (cyclist) pace, so its own average speed has to
-// be substituted for the graph's duration estimate. public_transport is NOT
-// in this table — its duration comes from estimateTransitDurationSeconds()
+// routing graph doesn't model them distinctly. public_transport is NOT in
+// this table — its duration comes from estimateTransitDurationSeconds()
 // below, driven by the real GTFS journey (stations/transfers), not from the
 // walking-route distance this table would otherwise apply it to. bike/car/
 // walk aren't here either: their OSRM graph already models them directly, so
 // route.duration is used as-is (see getRoute below).
-const AVERAGE_SPEED_MS = {
-  scooter: 4.17, // ~15 km/h, theoretical average — not tied to any real vehicle
-}
+const AVERAGE_SPEED_MS = {}
 
 // Real GTFS stop_times aren't loaded (see backend/scripts/run-gtfs-import.mjs),
 // so there's no scheduled ride time to read — this estimates it instead from
@@ -44,7 +36,6 @@ const WALK_SPEED_MS = 1.3 // ~4.7 km/h, average adult walking pace
 const CO2_G_PER_KM = {
   car: 120,
   public_transport: 4, // métro/RER
-  scooter: 5, // electric scooter, theoretical average (charging/rebalancing overhead)
   bike: 0,
   walk: 0,
 }

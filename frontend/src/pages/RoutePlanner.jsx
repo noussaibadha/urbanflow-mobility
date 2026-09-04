@@ -13,9 +13,8 @@ const SHARED_MOBILITY_REFRESH_MS = 60_000
 
 // Modes tried for the "other options" list, in priority order — the
 // currently selected mode is always included first, then this list is used
-// to fill up to 4 total. Scooter is de-prioritized since its route is
-// identical to bike's (same OSRM profile), just a different theoretical pace.
-const ALTERNATIVE_MODE_ORDER = ['public_transport', 'bike', 'walk', 'car', 'scooter']
+// to fill up to 4 total.
+const ALTERNATIVE_MODE_ORDER = ['public_transport', 'bike', 'walk', 'car']
 const MAX_ALTERNATIVES = 4
 
 function pickAlternativeModes(selectedMode) {
@@ -245,9 +244,9 @@ export function RoutePlanner() {
         return
       }
 
-      // The mode the user actually picked may have failed (e.g. no scooter
-      // nearby) even though other alternatives succeeded — surface that
-      // explicitly instead of silently switching them to a different mode.
+      // The mode the user actually picked may have failed even though other
+      // alternatives succeeded — surface that explicitly instead of silently
+      // switching them to a different mode.
       const selectedFailure = computed.find((c) => c.mode === mode && c.error)
       if (selectedFailure) setError(selectedFailure.error)
 

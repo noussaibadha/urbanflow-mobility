@@ -13,21 +13,18 @@ export const ROUTE_PRIORITY_OPTIONS = [
   { value: 'cheap', label: 'Économique', color: '#D9A441' },
 ]
 
-// "Trottinette" here is a theoretical route estimate only (like "À pied") —
-// no real free-floating availability check. Free-floating scooters have been
-// banned in Paris since September 2023; the one real GBFS integration this
-// app has (Dott) only lists bikes and is folded into "Vélo" instead (see
-// backend/src/services/dottBikes.service.js).
 export const PLANNER_MODE_OPTIONS = [
   { value: 'walk', label: 'À pied', color: '#6B8F87' },
   { value: 'bike', label: 'Vélo', color: '#52B788' },
-  { value: 'scooter', label: 'Trottinette', color: '#D9A441' },
   { value: 'public_transport', label: 'TC', color: '#3B6E91' },
   { value: 'car', label: 'Voiture', color: '#7FA98C' },
 ]
 
 export const TRANSPORT_MODE_META = {
   bike: { label: 'Vélo', color: '#52B788', emoji: '🚲' },
+  // Kept for rendering old trip history (Dashboard.jsx) saved from when
+  // "Trottinette" was a selectable planner mode — not itself selectable
+  // anymore (see PLANNER_MODE_OPTIONS above).
   scooter: { label: 'Trottinette', color: '#D9A441', emoji: '🛴' },
   public_transport: { label: 'TC', color: '#3B6E91', emoji: '🚏' },
   car: { label: 'Voiture', color: '#7FA98C', emoji: '🚗' },
