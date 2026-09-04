@@ -4,7 +4,7 @@ import { searchAddresses } from '../lib/geo'
 const DEBOUNCE_MS = 350
 const MIN_QUERY_LENGTH = 3
 
-export function AddressAutocomplete({ value, onChange, onSelect, placeholder, required }) {
+export function AddressAutocomplete({ value, onChange, onSelect, placeholder, required, ariaLabel }) {
   const [suggestions, setSuggestions] = useState([])
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -59,6 +59,7 @@ export function AddressAutocomplete({ value, onChange, onSelect, placeholder, re
         onChange={handleInputChange}
         onFocus={() => setOpen(true)}
         placeholder={placeholder}
+        aria-label={ariaLabel || placeholder}
         required={required}
         autoComplete="off"
       />

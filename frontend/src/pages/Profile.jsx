@@ -239,6 +239,9 @@ export function Profile() {
                 <span className="toggle-label">Éviter les grands axes</span>
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={form.avoid_highways}
+                  aria-label="Éviter les grands axes"
                   className={`toggle-switch${form.avoid_highways ? ' on' : ''}`}
                   onClick={() => handleToggle('avoid_highways')}
                 >
@@ -249,6 +252,9 @@ export function Profile() {
                 <span className="toggle-label">Notifications de trajet</span>
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={form.notifications_enabled}
+                  aria-label="Notifications de trajet"
                   className={`toggle-switch${form.notifications_enabled ? ' on' : ''}`}
                   onClick={() => handleToggle('notifications_enabled')}
                 >
@@ -268,6 +274,9 @@ export function Profile() {
               <span className="toggle-label">Géolocalisation</span>
               <button
                 type="button"
+                role="switch"
+                aria-checked={locationConsent === 'granted'}
+                aria-label="Géolocalisation"
                 className={`toggle-switch${locationConsent === 'granted' ? ' on' : ''}`}
                 onClick={() => setLocationConsent(locationConsent === 'granted' ? 'denied' : 'granted')}
               >

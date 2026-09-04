@@ -318,6 +318,7 @@ export function RoutePlanner() {
                 }}
                 onSelect={setDeparturePoint}
                 placeholder="Départ"
+                ariaLabel="Adresse de départ"
                 required={!useLiveLocation}
               />
             </div>
@@ -333,6 +334,7 @@ export function RoutePlanner() {
               }}
               onSelect={setDestinationPoint}
               placeholder="Destination"
+              ariaLabel="Adresse de destination"
               required
             />
           </div>
