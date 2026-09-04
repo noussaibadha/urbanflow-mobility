@@ -574,15 +574,31 @@
   color: var(--uf-ink);
 }
 
-.admin-link-btn {
-  display: block;
-  width: 100%;
-  margin-top: 1.25rem;
+.profile-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
 }
 
-.admin-page {
-  max-width: 900px;
-  margin: 0 auto;
+.profile-tab {
+  flex: 1;
+  background: var(--uf-white);
+  color: var(--uf-ink-soft);
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  padding: 0.65rem 1rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.profile-tab:hover {
+  background: var(--uf-white);
+}
+
+.profile-tab.active {
+  border-color: var(--uf-primary);
+  background: var(--uf-accent-light);
+  color: var(--uf-ink);
 }
 
 .logout-link {
