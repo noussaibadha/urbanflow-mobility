@@ -8,6 +8,7 @@ import { LocationConsentModal } from '../components/LocationConsentModal'
 import { apiRequest } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { PLANNER_MODE_OPTIONS, TRANSPORT_MODE_META, ROUTE_TYPE_META } from '../lib/transportModes'
+import { scoreCandidates } from '../utils/routeModel'
 
 const SHARED_MOBILITY_REFRESH_MS = 60_000
 
@@ -22,29 +23,24 @@ function pickAlternativeModes(selectedMode) {
   return modes.slice(0, MAX_ALTERNATIVES)
 }
 
-// "Économique" has no real per-mode cost data to compare (see lib/geo.js) —
-// this is a reasonable, non-invented default ordering instead: free modes
-// first, then public transport, car last since it's the only one with real
-// fuel/parking costs.
-const CHEAP_MODE_ORDER = ['walk', 'bike', 'public_transport', 'car']
-
 // Doesn't change what the planner computes or compares — only picks which of
 // the already-computed `successes` to highlight, based on the user's saved
-// profile.route_priority (see Profile.jsx). Returns null when there's no
-// saved preference (logged out, or never set), matching the pre-recommendation behavior.
+// profile.route_priority (see Profile.jsx) and the learned weights in
+// utils/routeModel.js. Returns null when there's no saved preference (logged
+// out, or never set), matching the pre-recommendation behavior.
 function pickRecommendedMode(successes, priority) {
   if (!priority || successes.length === 0) return null
 
-  if (priority === 'fast') {
-    return successes.reduce((best, c) => (c.result.durationSeconds < best.result.durationSeconds ? c : best)).mode
-  }
-  if (priority === 'eco') {
-    return successes.reduce((best, c) => (c.result.co2Grams < best.result.co2Grams ? c : best)).mode
-  }
-  if (priority === 'cheap') {
-    return CHEAP_MODE_ORDER.find((m) => successes.some((c) => c.mode === m)) ?? null
-  }
-  return null
+  const candidates = successes.map((c) => ({
+    mode: c.mode,
+    duration: c.result.durationSeconds / 60,
+    co2: c.result.co2Grams,
+  }))
+
+  const scored = scoreCandidates(candidates, priority)
+  if (scored.some((c) => c.score == null)) return null
+
+  return scored.reduce((best, c) => (c.score > best.score ? c : best)).mode
 }
 
 function formatDistance(meters) {
