@@ -16,14 +16,7 @@ function App() {
       <NavBar />
       <main>
         <Routes>
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Home />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/" element={<Home />} />
           <Route
             path="/planner"
             element={

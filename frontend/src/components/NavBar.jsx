@@ -87,9 +87,15 @@ export function NavBar() {
         </Link>
         <div className="nav-items">
           <NavItem to="/" label="Accueil" Icon={HomeIcon} active={isActive('/')} />
-          <NavItem to="/planner" label="Itinéraire" Icon={PlannerIcon} active={isActive('/planner')} />
-          <NavItem to="/dashboard" label="Tableau" Icon={DashboardIcon} active={isActive('/dashboard')} />
-          <NavItem to="/favorites" label="Favoris" Icon={FavoritesIcon} active={isActive('/favorites')} />
+          {user && (
+            <NavItem to="/planner" label="Itinéraire" Icon={PlannerIcon} active={isActive('/planner')} />
+          )}
+          {user && (
+            <NavItem to="/dashboard" label="Tableau" Icon={DashboardIcon} active={isActive('/dashboard')} />
+          )}
+          {user && (
+            <NavItem to="/favorites" label="Favoris" Icon={FavoritesIcon} active={isActive('/favorites')} />
+          )}
           <NavItem
             to={user ? '/profile' : '/login'}
             label="Profil"
