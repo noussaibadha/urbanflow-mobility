@@ -147,6 +147,23 @@
   color: var(--uf-ink);
 }
 
+.auth-form label.auth-checkbox-label {
+  flex-direction: row;
+  align-items: center;
+  font-weight: 500;
+  gap: 0.5rem;
+}
+
+.auth-form input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+}
+
 .auth-form input,
 .auth-form select,
 .auth-form textarea {
@@ -333,7 +350,8 @@
 
 /* ---------- Profile page ---------- */
 
-.profile-page {
+.profile-page,
+.legal-page {
   max-width: 640px;
   margin: 0 auto;
 }

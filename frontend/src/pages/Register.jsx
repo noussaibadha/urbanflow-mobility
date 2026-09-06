@@ -11,6 +11,7 @@ export function Register() {
   const navigate = useNavigate()
   const [form, setForm] = useState({ full_name: '', email: '', password: '' })
   const [transport, setTransport] = useState(null)
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -84,8 +85,21 @@ export function Register() {
           <TransportPicker options={PREFERRED_TRANSPORT_OPTIONS} value={transport} onChange={setTransport} />
         </label>
 
+        <label className="auth-checkbox-label">
+          <input
+            type="checkbox"
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            required
+          />
+          J'accepte les{' '}
+          <Link to="/mentions-legales" target="_blank" rel="noopener noreferrer">
+            conditions générales d'utilisation et la politique de confidentialité
+          </Link>
+        </label>
+
         {error && <p className="form-error">{error}</p>}
-        <button type="submit" disabled={submitting}>
+        <button type="submit" disabled={submitting || !acceptedTerms}>
           {submitting ? 'Création...' : 'Créer mon compte'}
         </button>
       </form>
