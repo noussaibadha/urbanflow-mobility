@@ -3,11 +3,9 @@ import { useLocationConsent } from './locationConsent'
 
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search'
 
-// router.project-osrm.org (the single public OSRM demo) only ever serves its
-// "driving" graph no matter which profile is requested in the URL, so every
-// mode used to come back with the exact same route. FOSSGIS (the German OSM
-// chapter) hosts separate car/bike/foot OSRM instances with real distinct
-// routing graphs, so each mode actually produces a different path.
+// Le serveur OSRM public renvoie toujours l'itinéraire voiture peu importe le
+// mode demandé. FOSSGIS a des serveurs séparés par mode (vélo/voiture/pied),
+// donc chaque mode a un vrai itinéraire différent.
 const OSRM_ROUTING_BY_MODE = {
   car: { base: 'https://routing.openstreetmap.de/routed-car', profile: 'driving' },
   bike: { base: 'https://routing.openstreetmap.de/routed-bike', profile: 'bike' },
@@ -15,24 +13,20 @@ const OSRM_ROUTING_BY_MODE = {
   public_transport: { base: 'https://routing.openstreetmap.de/routed-foot', profile: 'foot' },
 }
 
-// Average urban speeds (m/s), used to estimate duration for modes whose
-// routing graph doesn't model them distinctly. public_transport is NOT in
-// this table — its duration comes from estimateTransitDurationSeconds()
-// below, driven by the real GTFS journey (stations/transfers), not from the
-// walking-route distance this table would otherwise apply it to. bike/car/
-// walk aren't here either: their OSRM graph already models them directly, so
-// route.duration is used as-is (see getRoute below).
+// Vitesses moyennes en ville (m/s) pour estimer la durée des modes dont le
+// graphe de routing donne pas de durée fiable. Le transport en commun est pas
+// dans ce tableau, sa durée vient du vrai trajet GTFS
+// (estimateTransitDurationSeconds plus bas).
 const AVERAGE_SPEED_MS = {}
 
-// Real GTFS stop_times aren't loaded (see backend/scripts/run-gtfs-import.mjs),
-// so there's no scheduled ride time to read — this estimates it instead from
-// the journey's station count and number of boardings.
+// Les horaires GTFS réels sont pas chargés, donc on estime la durée avec le
+// nombre de stations et de correspondances.
 const TRANSIT_SECONDS_PER_STATION = 120 // ~2 min running time between stations
 const TRANSIT_WAIT_SECONDS = 210 // ~3.5 min average wait per boarding (3-4 min range)
 const WALK_SPEED_MS = 1.3 // ~4.7 km/h, average adult walking pace
 
-// Grams of CO2 per km travelled, used to estimate emissions and savings vs
-// car (rough ADEME-style approximations).
+// Grammes de CO2 par km, pour estimer les émissions et les économies par
+// rapport à la voiture (valeurs approx type ADEME).
 const CO2_G_PER_KM = {
   car: 120,
   public_transport: 4, // métro/RER
@@ -97,9 +91,9 @@ export async function getRoute({ start, end, mode }) {
   }
 }
 
-// journey is the /api/transit/journey response (see backend/src/controllers/
-// transit.controller.js#getJourney): walk to the first station, ride each leg
-// (stopsCount stations + one boarding wait), walk from the last station.
+// journey vient de la réponse /api/transit/journey : marche jusqu'à la
+// première station, chaque trajet en transport, puis marche jusqu'à
+// l'arrivée.
 export function estimateTransitDurationSeconds(journey) {
   if (!journey?.found) return null
 
@@ -136,11 +130,9 @@ export function watchPosition({ onUpdate, onError }) {
   return () => navigator.geolocation.clearWatch(watchId)
 }
 
-// Geolocation must never start on its own — the browser's native prompt only
-// covers the "can we ask" step, not "should we ask now". `enabled` is driven
-// by an explicit user action (a checkbox/button), so watchPosition() (and the
-// permission prompt it triggers) only fires once the user has actually opted
-// in on this page.
+// La géolocalisation doit jamais démarrer toute seule. Le navigateur demande
+// la permission, mais ça doit être déclenché par une action de l'utilisateur
+// (case à cocher/bouton), pas au chargement de la page.
 export function useOptInLocation(enabled) {
   const [position, setPosition] = useState(null)
   const [error, setError] = useState(null)
@@ -157,11 +149,9 @@ export function useOptInLocation(enabled) {
   return { position, error }
 }
 
-// RGPD-style consent gate in front of useOptInLocation above: geolocation is
-// never requested until the user has explicitly said yes once (persisted via
-// lib/locationConsent.js, so the prompt isn't repeated on every visit — see
-// components/LocationConsentModal.jsx for the prompt itself, and the
-// Profile page's "Confidentialité" section to change a past choice).
+// Barrière de consentement RGPD avant la géolocalisation : on demande jamais
+// la position tant que l'utilisateur a pas dit oui une fois (choix gardé en
+// mémoire pour pas redemander à chaque visite).
 export function useConsentedLocation() {
   const [consent, setConsent] = useLocationConsent()
   const [wantsLocation, setWantsLocation] = useState(false)

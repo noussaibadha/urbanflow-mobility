@@ -4,19 +4,15 @@ import * as TransitStopsModel from '../models/transitStops.model.js';
 import * as TransitStopRoutesModel from '../models/transitStopRoutes.model.js';
 import * as TransitRouteDirectionsModel from '../models/transitRouteDirections.model.js';
 
-// Full regional GTFS feeds (e.g. Île-de-France Mobilités) can list tens of
-// thousands of stops network-wide. For this demo we only keep stops inside
-// central Paris, capped at MAX_STOPS, so the import stays fast and light
-// while still demonstrating the GTFS integration end to end.
+// Les données GTFS complètes d'Île-de-France Mobilités sont énormes. Pour
+// cette démo on garde que les arrêts du centre de Paris, avec un plafond,
+// pour que l'import reste rapide.
 const PARIS_BBOX = { minLat: 48.815, maxLat: 48.902, minLon: 2.224, maxLon: 2.47 };
 const MAX_STOPS = 2000;
 
-// GTFS route_type: 0=tram, 1=metro, 2=rail (RER/train), 3=bus, ...
-// We keep these four since they're what riders actually board in central
-// Paris; more exotic types (ferry, cable car...) don't apply here. Import is
-// still bounded to our ~1500 curated central-Paris stations (see
-// quayToStation below), so including bus doesn't pull in the whole region's
-// bus network — only the lines that actually serve those stations.
+// route_type GTFS : 0=tram, 1=métro, 2=RER/train, 3=bus. On garde ces 4 car
+// c'est ce qu'on prend réellement à Paris ; les autres (ferry, téléphérique...)
+// sont pas concernés ici.
 const SUPPORTED_ROUTE_TYPES = new Set([0, 1, 2, 3]);
 
 function loadCsvEntry(zip, filename) {
@@ -36,10 +32,9 @@ export async function importGtfsStatic(feedUrl) {
 
   const stopsRows = loadCsvEntry(zip, 'stops.txt');
 
-  // location_type=1 stop_place rows are the real named stations/hubs (one
-  // entry per physical station, e.g. "Nation", "République"), unlike the
-  // "monomodalStopPlace" ids which only cover a sparse, arbitrary handful of
-  // stops and don't reliably include major hubs.
+  // Les lignes location_type=1 sont les vraies stations (ex: Nation,
+  // République), contrairement aux ids "monomodalStopPlace" qui couvrent mal
+  // les grosses stations.
   const stations = stopsRows
     .filter((row) => row.location_type === '1')
     .map((row) => ({
@@ -68,8 +63,8 @@ export async function importGtfsStatic(feedUrl) {
 async function importTransitLines(zip, stopsRows, stations) {
   const stationIds = new Set(stations.map((s) => s.id));
 
-  // Boardable "quay" stops (location_type=0) whose parent_station is one of
-  // our stations — this is how stop_times.txt actually references a station.
+  // Les arrêts "quay" (location_type=0) sont ceux que stop_times.txt utilise
+  // réellement pour référencer une station.
   const quayToStation = new Map();
   for (const row of stopsRows) {
     if (row.location_type === '0' && stationIds.has(row.parent_station)) {
@@ -89,10 +84,9 @@ async function importTransitLines(zip, stopsRows, stations) {
   const tripToRoute = new Map();
   const tripToHeadsign = new Map();
   const tripToDirection = new Map();
-  // One representative trip per (route, direction) — enough to read off the
-  // ordered station sequence for that direction without having to store
-  // every trip's stops. A metro/RER/tram line's stop order barely varies
-  // trip to trip, so a single sample per direction is a safe approximation.
+  // On garde un seul trajet par ligne/direction, ça suffit pour connaître
+  // l'ordre des stations : une ligne change rarement d'ordre d'arrêt selon
+  // les trajets.
   const representativeTrip = new Map();
 
   for (const t of loadCsvEntry(zip, 'trips.txt')) {
@@ -105,9 +99,8 @@ async function importTransitLines(zip, stopsRows, stations) {
   }
   const representativeTripIds = new Set(representativeTrip.values());
 
-  // stop_times.txt is huge (100s of MB) for a region-wide feed, so scan the
-  // decompressed buffer by hand instead of splitting it into a giant array
-  // of rows — we only need a few columns out of it.
+  // stop_times.txt est énorme (centaines de Mo), donc on le lit ligne par
+  // ligne au lieu de tout charger en tableau, pour économiser de la mémoire.
   const stopTimesEntry = zip.getEntry('stop_times.txt');
   if (!stopTimesEntry) throw new Error('Le flux GTFS ne contient pas de fichier stop_times.txt');
   const buffer = stopTimesEntry.getData();

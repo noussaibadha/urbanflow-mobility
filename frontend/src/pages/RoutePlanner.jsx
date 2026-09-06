@@ -12,9 +12,8 @@ import { scoreCandidates } from '../utils/routeModel'
 
 const SHARED_MOBILITY_REFRESH_MS = 60_000
 
-// Modes tried for the "other options" list, in priority order — the
-// currently selected mode is always included first, then this list is used
-// to fill up to 4 total.
+// Modes essayés pour la liste "autres options", dans l'ordre de priorité —
+// le mode sélectionné est toujours en premier, puis on complète jusqu'à 4.
 const ALTERNATIVE_MODE_ORDER = ['public_transport', 'bike', 'walk', 'car']
 const MAX_ALTERNATIVES = 4
 
@@ -23,11 +22,9 @@ function pickAlternativeModes(selectedMode) {
   return modes.slice(0, MAX_ALTERNATIVES)
 }
 
-// Doesn't change what the planner computes or compares — only picks which of
-// the already-computed `successes` to highlight, based on the user's saved
-// profile.route_priority (see Profile.jsx) and the learned weights in
-// utils/routeModel.js. Returns null when there's no saved preference (logged
-// out, or never set), matching the pre-recommendation behavior.
+// Change pas le calcul, juste lequel des résultats déjà calculés est mis en
+// avant, selon la priorité enregistrée dans le profil et les poids appris
+// (utils/routeModel.js). Renvoie null si pas de préférence enregistrée.
 function pickRecommendedMode(successes, priority) {
   if (!priority || successes.length === 0) return null
 
@@ -79,10 +76,9 @@ export function RoutePlanner() {
   } = useConsentedLocation()
   const [departureText, setDepartureText] = useState('')
   const [destinationText, setDestinationText] = useState('')
-  // Set when the user picks a suggestion from the address autocomplete, so we
-  // can reuse its lat/lon directly instead of re-geocoding the full Nominatim
-  // display_name (which is often too verbose for Nominatim to match again).
-  // Cleared whenever the text is edited by hand so it never goes stale.
+  // Rempli quand l'utilisateur choisit une adresse dans l'autocomplete, pour
+  // réutiliser directement ses coordonnées au lieu de re-géocoder le texte
+  // affiché. Remis à zéro si le texte est modifié à la main.
   const [departurePoint, setDeparturePoint] = useState(null)
   const [destinationPoint, setDestinationPoint] = useState(null)
   const [mode, setMode] = useState('bike')
@@ -91,9 +87,8 @@ export function RoutePlanner() {
   const [end, setEnd] = useState(null)
   const [departureTime, setDepartureTime] = useState(null)
   const [routeResult, setRouteResult] = useState(null)
-  // One entry per successfully computed mode from the last "Calculer" click —
-  // powers the alternatives list. The currently displayed routeResult/
-  // metroJourney always mirrors whichever entry matches `mode`.
+  // Une entrée par mode calculé avec succès au dernier clic sur "Calculer" —
+  // sert pour la liste des alternatives.
   const [alternatives, setAlternatives] = useState([])
 
   const [loading, setLoading] = useState(false)
@@ -160,9 +155,8 @@ export function RoutePlanner() {
   }
 
   async function computeRouteForMode(startPoint, endPoint, m) {
-    // Routing itself is unchanged for every mode, bike included — a real
-    // Dott bike being absent nearby never blocks or alters the route, it
-    // only adds informational detail below when one is found.
+    // Le calcul d'itinéraire change pas si y'a pas de Dott (vélo) à
+    // proximité, ça ajoute juste une info en plus si y'en a un.
     const result = await getRoute({ start: startPoint, end: endPoint, mode: m })
     let journey = null
     let dottBike = null
@@ -179,9 +173,9 @@ export function RoutePlanner() {
           journey
         )
       } else {
-        // The OSRM foot-profile "route" above is only used for the map path/
-        // distance here — its distance/25km/h duration guess badly
-        // undercounts a real transit trip (no station stops, no wait time).
+        // L'itinéraire OSRM piéton sert juste à tracer le trajet sur la
+        // carte, pas pour la durée (sous-estimée pour un vrai trajet en
+        // transport, sans les arrêts/attentes).
         const estimated = estimateTransitDurationSeconds(journey)
         if (estimated != null) result.durationSeconds = estimated
       }
@@ -240,9 +234,9 @@ export function RoutePlanner() {
         return
       }
 
-      // The mode the user actually picked may have failed even though other
-      // alternatives succeeded — surface that explicitly instead of silently
-      // switching them to a different mode.
+      // Le mode choisi par l'utilisateur peut avoir échoué même si d'autres
+      // ont marché — on le dit clairement au lieu de basculer sans prévenir
+      // sur un autre mode.
       const selectedFailure = computed.find((c) => c.mode === mode && c.error)
       if (selectedFailure) setError(selectedFailure.error)
 

@@ -6,9 +6,9 @@ import {
 } from '../services/gtfs.service.js';
 
 const EARTH_RADIUS_M = 6371000;
-// Beyond this, "nearest station" stops being a meaningful walk — treat it as
-// outside the GTFS import's coverage area (central Paris) rather than
-// silently proposing a station that's actually kilometers away.
+// Au-delà de cette distance, la station la plus proche est trop loin pour
+// être utile — on considère que c'est hors de la zone couverte (centre de
+// Paris).
 const MAX_WALK_TO_STATION_METERS = 3000;
 
 function haversineMeters(lat1, lon1, lat2, lon2) {
@@ -33,10 +33,9 @@ function nearestStation(stations, lat, lon) {
   return best ? { station: best, distanceMeters: bestDist } : null;
 }
 
-// Picks the (route, direction) whose station_sequence visits fromStationId
-// before toStationId, so we can tell the rider which terminus to board
-// towards. Falls back to the first known direction if the order can't be
-// determined (e.g. the representative trip didn't cover both stations).
+// Trouve la direction de la ligne qui passe par la station de départ avant
+// celle d'arrivée, pour dire à l'utilisateur vers quel terminus aller. Prend
+// la première direction connue si on peut pas déterminer l'ordre.
 function resolveDirection(directionsByRoute, routeId, fromStationId, toStationId) {
   const candidates = directionsByRoute.get(routeId) || [];
   for (const d of candidates) {
@@ -53,10 +52,9 @@ function resolveDirection(directionsByRoute, routeId, fromStationId, toStationId
 function buildLeg(directionsByRoute, route, fromStationId, toStationId, boardName, alightName) {
   const direction = resolveDirection(directionsByRoute, route.route_id, fromStationId, toStationId);
 
-  // Real GTFS stop_times aren't loaded (see backend/scripts/run-gtfs-import.mjs),
-  // so there's no scheduled ride time — the frontend estimates it from this
-  // station count instead. null when the representative trip's sequence
-  // doesn't cover both stations, so the caller falls back to a default.
+  // Les horaires GTFS réels sont pas chargés, donc le frontend estime la
+  // durée avec le nombre de stations. Renvoie null si on peut pas déterminer
+  // l'ordre des stations.
   let stopsCount = null;
   if (direction) {
     const seq = direction.station_sequence.split(',');
@@ -76,10 +74,9 @@ function buildLeg(directionsByRoute, route, fromStationId, toStationId, boardNam
   };
 }
 
-// When several route types serve the same station (e.g. a hub with both
-// métro and bus), pick one "headline" type to color the map marker with —
-// métro and RER read as more useful landmarks than the bus routes that
-// happen to also stop there.
+// Si plusieurs types de transport desservent la même station (métro + bus
+// par ex), on choisit un seul type pour la couleur du marqueur sur la carte
+// — métro/RER sont plus parlants que le bus.
 const DOMINANT_TYPE_PRIORITY = [1, 0, 2, 3];
 
 function dominantRouteType(routeTypes) {
@@ -198,9 +195,9 @@ export async function getJourney(req, res, next) {
       });
     }
 
-    // No direct line: look for the best single-transfer station — one that
-    // shares a line with the origin and a (possibly different) line with
-    // the destination, minimizing the detour.
+    // Pas de ligne directe : on cherche la meilleure station de
+    // correspondance (partage une ligne avec le départ et une avec
+    // l'arrivée) qui minimise le détour.
     const toRouteIds = new Set(toStation.routes.map((r) => r.route_id));
     let bestTransfer = null;
     let bestScore = Infinity;
