@@ -139,16 +139,6 @@ export function Dashboard() {
                 )
               })}
             </div>
-
-            <div className="white-card">
-              <div className="eco-score-row">
-                <span>Score écologique</span>
-                <span className="eco-score-value">{summary.ecoScore}%</span>
-              </div>
-              <div className="eco-score-bar-track">
-                <div className="eco-score-bar-fill" style={{ width: `${summary.ecoScore}%` }} />
-              </div>
-            </div>
           </>
         )
       )}
